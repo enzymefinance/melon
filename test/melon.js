@@ -91,7 +91,7 @@ contract('MelonToken', (accounts) => {
   it('Should sign test cases', (done) => {
     async.mapSeries(testCases,
       function(testCase, callbackMap) {
-        var hash = sha256(new Buffer(testCase.account.slice(2),'hex'));
+        const hash = sha256(new Buffer(testCase.account.slice(2),'hex'));
         sign(web3, signer, hash, (err, sig) => {
           testCase.v = sig.v;
           testCase.r = sig.r;
@@ -174,7 +174,7 @@ contract('MelonToken', (accounts) => {
       return contract.balanceOf(accounts[2]);
     }).then((result) => {
       initialBalance = result;
-      var hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         contract.buyRecipient(accounts[2], sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy}).then((result) => {
           return contract.price();
@@ -196,6 +196,32 @@ contract('MelonToken', (accounts) => {
     });
   });
 
+  it('Test buying w poorly fromed msg value', (done) => {
+    var amountToBuy = 1001;
+    var initialBalance;
+    contract.balanceOf(accounts[1]).then((result) => {
+      initialBalance = result;
+      const hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
+      sign(web3, signer, hash, (err, sig) => {
+        if (!err) {
+          contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
+          }).then((result) => {
+            assert.fail();
+          }).catch((err) => {
+            assert.notEqual(err.name, 'AssertionError');
+            contract.balanceOf(accounts[1]).then((result) => {
+              var finalBalance = result;
+              assert.equal(finalBalance.sub(initialBalance).toNumber(), 0);
+              done();
+            });
+          });
+        } else {
+          callback(err, undefined);
+        }
+      });
+    });
+  });
+
   it('Test halting, buying, and failing', (done) => {
     var amountToBuy = web3.toWei(1, "ether");
     var initialBalance;
@@ -203,7 +229,7 @@ contract('MelonToken', (accounts) => {
       initialBalance = result;
       return contract.halt({from: founder, value: 0});
     }).then((result) => {
-      var hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
           contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
@@ -231,7 +257,7 @@ contract('MelonToken', (accounts) => {
       initialBalance = result;
       return contract.unhalt({from: founder, value: 0});
     }).then((result) => {
-      var hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
           contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
@@ -251,7 +277,7 @@ contract('MelonToken', (accounts) => {
 
   it('Test buying after the sale ends', (done) => {
     contract.setBlockNumber(endBlock+1, {from: accounts[0], value: 0}).then((result) => {
-      var hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
           contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: web3.toWei(1, "ether")
