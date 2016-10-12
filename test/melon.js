@@ -44,6 +44,7 @@ contract('MelonToken', (accounts) => {
   const founder = accounts[0];
   const signer = accounts[1];
   const FOUNDER_LOCKUP = 2252571;
+  const TRANSFER_LOCKUP = 370285;
 
   before('Check accounts', (done) => {
     assert.equal(accounts.length, 10);
@@ -109,7 +110,7 @@ contract('MelonToken', (accounts) => {
     async.eachSeries(testCases,
       function(testCase, callbackEach) {
         contract.setBlockNumber(testCase.blockNumber).then((result) => {
-            return contract.testPrice();
+          return contract.testPrice();
         }).then((result) => {
           assert.equal(result.toNumber(), testCase.expectedPrice);
           callbackEach();
@@ -149,8 +150,8 @@ contract('MelonToken', (accounts) => {
             //     new BigNumber(testCase.expectedPrice)).times(
             //     new BigNumber(amountToBuy)));
             assert.equal(result.toNumber(), mMLN.times(
-                    new BigNumber(testCase.expectedPrice)).times(
-                    new BigNumber(amountToBuy)));
+              new BigNumber(testCase.expectedPrice)).times(
+              new BigNumber(amountToBuy)));
             callbackEach();
           });
         },
@@ -404,18 +405,31 @@ contract('MelonToken', (accounts) => {
     });
   });
 
-  // it('Test transfer after restricted period', (done) => {
-  //   var account3 = accounts[3];
-  //   var account4 = accounts[4];
-  //   var amount = web3.toWei(1, "ether");
-  //   var blockNumber = Math.round(endBlock + 61*86400/14);
-  //   contract.setBlockNumber(blockNumber, {from: founder, value: 0
-  //   }).then((result) => {
-  //     return contract.transfer(account3, amount, {from: account4, value: 0});
-  //   }).then((result) => {
-  //     //TODO check if transfer succeded
-  //     done();
-  //   });
-  // });
+  it('Test transfer after restricted period', (done) => {
+    var account3 = accounts[3];
+    var account4 = accounts[4];
+    var blockNumber = Math.round(endBlock + TRANSFER_LOCKUP + 1);
+    var initalBalance3;
+    var initalBalance4;
+    var transferAmount = web3.toWei(1, "ether");
+    contract.setBlockNumber(blockNumber, {from: founder, value: 0
+    }).then((result) => {
+      return contract.balanceOf(account3);
+    }).then((result) => {
+      initalBalance3 = result;
+      return contract.balanceOf(account4);
+    }).then((result) => {
+      initalBalance4 = result;
+      return contract.transfer(account3, transferAmount, {from: account4, value: 0});
+    }).then((result) => {
+      return contract.balanceOf(account3);
+    }).then((result) => {
+      assert.equal(result.toNumber(), initalBalance3.plus(transferAmount).toNumber());
+      return contract.balanceOf(account4);
+    }).then((result) => {
+      assert.equal(result.toNumber(), initalBalance4.minus(transferAmount).toNumber());
+      done();
+    });
+  });
 
 });
