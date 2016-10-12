@@ -39,9 +39,11 @@ contract('MelonToken', (accounts) => {
   let contractAddress;
   var accounts;
   let testCases;
-  const unit = new BigNumber(Math.pow(10,18));
+  const ETHER = new BigNumber(Math.pow(10,18));
+  const mMLN = new BigNumber(Math.pow(10,15)); // 1 MLN == 1000 mMLN
   const founder = accounts[0];
   const signer = accounts[1];
+  const FOUNDER_LOCKUP = 2252571;
 
   before('Check accounts', (done) => {
     assert.equal(accounts.length, 10);
@@ -63,12 +65,12 @@ contract('MelonToken', (accounts) => {
       const blockNumber = Math.round(startBlock + (endBlock-startBlock)*i/(numBlocks-1));
       let expectedPrice;
       if (blockNumber>=startBlock && blockNumber<startBlock+250) {
-        expectedPrice = 170;
+        expectedPrice = 1100;
       } else if (blockNumber>endBlock || blockNumber<startBlock) {
-        expectedPrice = 100;
+        expectedPrice = 1000;
       } else {
         //must use Math.floor to simulate Solidity's integer division
-        expectedPrice = 100 + Math.floor(Math.floor(4*(endBlock - blockNumber)/(endBlock - startBlock + 1))*67/4);
+        expectedPrice = 1000 + Math.floor(Math.floor(4*(endBlock - blockNumber)/(endBlock - startBlock + 1)) * 100 / 4);
       }
       const accountNum = Math.max(1,Math.min(i+1, accounts.length-1));
       const account = accounts[accountNum];
@@ -106,7 +108,9 @@ contract('MelonToken', (accounts) => {
   it('Test price', (done) => {
     async.eachSeries(testCases,
       function(testCase, callbackEach) {
-        contract.testPrice(testCase.blockNumber).then((result) => {
+        contract.setBlockNumber(testCase.blockNumber).then((result) => {
+            return contract.testPrice();
+        }).then((result) => {
           assert.equal(result.toNumber(), testCase.expectedPrice);
           callbackEach();
         });
@@ -133,7 +137,7 @@ contract('MelonToken', (accounts) => {
             // console.log(
             //   '\nFounder Balance: ' + initialBalance +
             //   '\nstartBlock: ' + startBlock +
-            //   '\nnew blocknumber: ' + result +
+            //   '\nbalanceOf: ' + result +
             //   '\nendBlock: ' + endBlock +
             //   '\nv: ' + testCase.v +
             //   '\nr: ' + testCase.r +
@@ -141,17 +145,19 @@ contract('MelonToken', (accounts) => {
             //   '\nbalance: ' + result +
             //   '\namountToBuy: ' + amountToBuy +
             //   '\nexpectedPrice: ' + testCase.expectedPrice +
-            //   '\nexpectedResult: ' + unit.times(
+            //   '\nexpectedResult: ' + mMLN.times(
             //     new BigNumber(testCase.expectedPrice)).times(
             //     new BigNumber(amountToBuy)));
-            assert.equal(result.equals(unit.times(new BigNumber(testCase.expectedPrice)).times(new BigNumber(amountToBuy))), true);
+            assert.equal(result.toNumber(), mMLN.times(
+                    new BigNumber(testCase.expectedPrice)).times(
+                    new BigNumber(amountToBuy)));
             callbackEach();
           });
         },
         (err) => {
           web3.eth.getBalance(founder, (err, result) => {
             var finalBalance = result;
-            assert.equal(finalBalance.minus(initialBalance).equals(unit.times(new BigNumber(amountBought))), true);
+            assert.equal(finalBalance.minus(initialBalance).toNumber(), ETHER.times(new BigNumber(amountBought)));
             done();
           });
         }
@@ -172,7 +178,7 @@ contract('MelonToken', (accounts) => {
         contract.buyRecipient(accounts[2], sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy}).then((result) => {
           return contract.price();
         }).then((result) => {
-          price = result;
+          price = result / 1000;
           return contract.balanceOf(accounts[2]);
         }).then((result) => {
           var finalBalance = result;
@@ -182,7 +188,7 @@ contract('MelonToken', (accounts) => {
           //   '\namountToBuy: ' + amountToBuy +
           //   '\nprice: ' + price
           // );
-          assert.equal(finalBalance.sub(initialBalance).equals((new BigNumber(amountToBuy)).times(price)), true);
+          assert.equal(finalBalance.sub(initialBalance).toNumber(), new BigNumber(amountToBuy).times(price));
           done();
         });
       });
@@ -190,16 +196,25 @@ contract('MelonToken', (accounts) => {
   });
 
   it('Test halting, buying, and failing', (done) => {
-    contract.halt({from: founder, value: 0}).then((result) => {
+    var amountToBuy = web3.toWei(1, "ether");
+    var initialBalance;
+    contract.balanceOf(accounts[1]).then((result) => {
+      initialBalance = result;
+      return contract.halt({from: founder, value: 0});
+    }).then((result) => {
       var hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
-          contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: web3.toWei(1, "ether")
+          contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
           }).then((result) => {
-            assert.fail('Non-throw exception','throw exception');
-            done();
+            assert.fail();
           }).catch((err) => {
-            done();
+            assert.notEqual(err.name, 'AssertionError');
+            contract.balanceOf(accounts[1]).then((result) => {
+              var finalBalance = result;
+              assert.equal(finalBalance.sub(initialBalance).toNumber(), 0);
+              done();
+            });
           });
         } else {
           callback(err, undefined);
@@ -209,13 +224,21 @@ contract('MelonToken', (accounts) => {
   });
 
   it('Test unhalting, buying, and succeeding', (done) => {
-    contract.unhalt({from: founder, value: 0}).then((result) => {
+    var amountToBuy = web3.toWei(1, "ether");
+    var initialBalance;
+    contract.balanceOf(accounts[1]).then((result) => {
+      initialBalance = result;
+      return contract.unhalt({from: founder, value: 0});
+    }).then((result) => {
       var hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
-          contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: web3.toWei(1, "ether")
+          contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
           }).then((result) => {
-            //TODO: check if buying succeded
+            return contract.balanceOf(accounts[1]);
+          }).then((result) => {
+            var finalBalance = result;
+            assert.equal(finalBalance.sub(initialBalance).toNumber(), amountToBuy);
             done();
           });
         } else {
@@ -232,9 +255,9 @@ contract('MelonToken', (accounts) => {
         if (!err) {
           contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: web3.toWei(1, "ether")
           }).then((result) => {
-            assert.fail('Non-throw exception','throw exception');
-            done();
+            assert.fail();
           }).catch((err) => {
+            assert.notEqual(err.name, 'AssertionError');
             done();
           });
         } else {
@@ -251,14 +274,14 @@ contract('MelonToken', (accounts) => {
     });
   });
 
-  it('Test bounty and ecosystem allocation', (done) => {
+  it('Test melonport allocation', (done) => {
     var expectedChange;
     var blockNumber;
     var initialFounderBalance;
     var finalFounderBalance;
     contract.totalSupply().then((result) => {
       var totalSupply = result;
-      expectedChange = new BigNumber(totalSupply).div(20).add((new BigNumber(2500000)).times(unit));
+      expectedChange = new BigNumber(totalSupply).div(5);
       blockNumber = endBlock + 1;
       return contract.balanceOf(founder);
     }).then((result) => {
@@ -270,41 +293,47 @@ contract('MelonToken', (accounts) => {
       return contract.balanceOf(founder);
     }).then((result) => {
       finalFounderBalance = result;
-      //TODO check result
-      // assert.equal(finalFounderBalance.minus(initialFounderBalance).equals(new BigNumber(expectedChange)), true);
+      // console.log(
+      //   '\nfinalFounderBalance: ' + finalFounderBalance +
+      //   '\ninitalFounderBalance: ' + initialFounderBalance +
+      //   '\nexpectedChange: ' + expectedChange
+      // );
+      assert.equal(finalFounderBalance.minus(initialFounderBalance).toNumber(), new BigNumber(expectedChange));
       done();
     });
   });
 
-  it('Test bounty and ecosystem allocation twice', (done) => {
+  it('Test melonport allocation twice', (done) => {
     contract.allocateMelonportTokens({from: founder, value: 0
     }).then((result) => {
-      assert.fail('Non-throw exception','throw exception');
-      done();
+      assert.fail();
     }).catch((err) => {
+      assert.notEqual(err.name, 'AssertionError');
       done();
     });
   });
 
   it('Test founder token allocation too early', (done) => {
-    var blockNumber = endBlock + 86400/14 * 366;
-    contract.allocateFounderTokens({from: founder, value: 0
+    var blockNumber = endBlock + FOUNDER_LOCKUP;
+    contract.setBlockNumber(blockNumber, {from: founder, value: 0}).then((result) => {
+      return contract.allocateFounderTokens({from: founder, value: 0});
     }).then((result) => {
-      assert.fail('Non-throw exception','throw exception');
-      done();
+      assert.fail();
     }).catch((err) => {
+      assert.notEqual(err.name, 'AssertionError');
       done();
     });
   });
 
   it('Test founder token allocation on time', (done) => {
-    var expectedFounderAllocation;
-    var initialFounderBalance;
+    var expectedChange;
     var blockNumber;
+    var initialFounderBalance;
+    var finalFounderBalance;
     contract.presaleTokenSupply().then((result) => {
       var totalSupply = result;
-      expectedFounderAllocation = new BigNumber(totalSupply).div(10);
-      blockNumber = endBlock + 86400/14 * 366;
+      expectedChange = new BigNumber(totalSupply).div(5);
+      blockNumber = endBlock + FOUNDER_LOCKUP + 1;
       return contract.balanceOf(founder);
     }).then((result) => {
       initialFounderBalance = result;
@@ -315,8 +344,12 @@ contract('MelonToken', (accounts) => {
       return contract.balanceOf(founder);
     }).then((result) => {
       var finalFounderBalance = result;
-      //TODO check result
-      // assert.equal(finalFounderBalance.minus(initialFounderBalance).equals(expectedFounderAllocation), true);
+      // console.log(
+      //   '\nfinalFounderBalance: ' + finalFounderBalance +
+      //   '\ninitalFounderBalance: ' + initialFounderBalance +
+      //   '\nexpectedChange: ' + expectedChange
+      // );
+      assert.equal(finalFounderBalance.minus(initialFounderBalance).toNumber(), new BigNumber(expectedChange));
       done();
     });
   });
@@ -324,9 +357,9 @@ contract('MelonToken', (accounts) => {
   it('Test founder token allocation twice', (done) => {
     contract.allocateFounderTokens({from: founder, value: 0
     }).then((result) => {
-      assert.fail('Non-throw exception','throw exception');
-      done();
+      assert.fail();
     }).catch((err) => {
+      assert.notEqual(err.name, 'AssertionError');
       done();
     });
   });
@@ -337,9 +370,9 @@ contract('MelonToken', (accounts) => {
     var hacker = accounts[1];
     contract.changeFounder(newFounder, {from: hacker, value: 0
     }).then((result) => {
-      assert.fail('Non-throw exception','throw exception');
-      done();
+      assert.fail();
     }).catch((err) => {
+      assert.notEqual(err.name, 'AssertionError');
       done();
     });
   });
@@ -364,25 +397,25 @@ contract('MelonToken', (accounts) => {
     }).then((result) => {
       return contract.transfer(account3, amount, {from: account4, value: 0});
     }).then((result) => {
-      assert.fail('Non-throw exception','throw exception');
-      done();
+      assert.fail();
     }).catch((err) => {
+      assert.notEqual(err.name, 'AssertionError');
       done();
     });
   });
 
-  it('Test transfer after restricted period', (done) => {
-    var account3 = accounts[3];
-    var account4 = accounts[4];
-    var amount = web3.toWei(1, "ether");
-    var blockNumber = Math.round(endBlock + 61*86400/14);
-    contract.setBlockNumber(blockNumber, {from: founder, value: 0
-    }).then((result) => {
-      return contract.transfer(account3, amount, {from: account4, value: 0});
-    }).then((result) => {
-      //TODO check if transfer succeded
-      done();
-    });
-  });
+  // it('Test transfer after restricted period', (done) => {
+  //   var account3 = accounts[3];
+  //   var account4 = accounts[4];
+  //   var amount = web3.toWei(1, "ether");
+  //   var blockNumber = Math.round(endBlock + 61*86400/14);
+  //   contract.setBlockNumber(blockNumber, {from: founder, value: 0
+  //   }).then((result) => {
+  //     return contract.transfer(account3, amount, {from: account4, value: 0});
+  //   }).then((result) => {
+  //     //TODO check if transfer succeded
+  //     done();
+  //   });
+  // });
 
 });
