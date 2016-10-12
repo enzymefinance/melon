@@ -157,8 +157,8 @@ contract MelonToken is ERC20, SafeMath {
     function allocateFounderTokens()
         only_founder()
         block_number_past(endBlock + FOUNDER_LOCKUP)
-        when_founder_not_allocated()
         when_melonport_is_allocated()
+        when_founder_not_allocated()
     {
         var founder_allocation = presaleTokenSupply * FOUNDER_PERCENT_ALLOCATION / 100;
         balances[founder] = safeAdd(balances[founder], founder_allocation);

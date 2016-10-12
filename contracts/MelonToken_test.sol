@@ -119,7 +119,7 @@ contract MelonToken_test is ERC20, SafeMath {
     }
 
     /// Pre: startBlcok, endBlock specified in constructor
-    /// Post: Contribution price in mMLN/ETH, where 1 MLN == 1000 mMLNS
+    /// Post: Contribution price in mMLN/ETH, where 1 MLN == 1000 mMLN
     function price() constant returns(uint)
     {
         if (block.number>=startBlock && block.number<startBlock+POWER_HOUR) return 1100; //power hour
