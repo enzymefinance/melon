@@ -91,7 +91,7 @@ contract('MelonToken', (accounts) => {
   it('Should sign test cases', (done) => {
     async.mapSeries(testCases,
       function(testCase, callbackMap) {
-        const hash = sha256(new Buffer(testCase.account.slice(2),'hex'));
+        const hash = '0x' + sha256(new Buffer(testCase.account.slice(2),'hex'));
         sign(web3, signer, hash, (err, sig) => {
           testCase.v = sig.v;
           testCase.r = sig.r;
@@ -174,7 +174,7 @@ contract('MelonToken', (accounts) => {
       return contract.balanceOf(accounts[2]);
     }).then((result) => {
       initialBalance = result;
-      const hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = '0x' + sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         contract.buyRecipient(accounts[2], sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy}).then((result) => {
           return contract.price();
@@ -201,7 +201,7 @@ contract('MelonToken', (accounts) => {
     var initialBalance;
     contract.balanceOf(accounts[1]).then((result) => {
       initialBalance = result;
-      const hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = '0x' + sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
           contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
@@ -229,7 +229,7 @@ contract('MelonToken', (accounts) => {
       initialBalance = result;
       return contract.halt({from: founder, value: 0});
     }).then((result) => {
-      const hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = '0x' + sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
           contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
@@ -257,7 +257,7 @@ contract('MelonToken', (accounts) => {
       initialBalance = result;
       return contract.unhalt({from: founder, value: 0});
     }).then((result) => {
-      const hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = '0x' + sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
           contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
@@ -277,7 +277,7 @@ contract('MelonToken', (accounts) => {
 
   it('Test buying after the sale ends', (done) => {
     contract.setBlockNumber(endBlock+1, {from: accounts[0], value: 0}).then((result) => {
-      const hash = sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = '0x' + sha256(new Buffer(accounts[1].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
           contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: web3.toWei(1, "ether")
@@ -308,7 +308,7 @@ contract('MelonToken', (accounts) => {
     var finalFounderBalance;
     contract.totalSupply().then((result) => {
       var totalSupply = result;
-      expectedChange = new BigNumber(totalSupply).div(5);
+      expectedChange = new BigNumber(totalSupply).div(10);
       blockNumber = endBlock + 1;
       return contract.balanceOf(founder);
     }).then((result) => {
@@ -359,7 +359,7 @@ contract('MelonToken', (accounts) => {
     var finalFounderBalance;
     contract.presaleTokenSupply().then((result) => {
       var totalSupply = result;
-      expectedChange = new BigNumber(totalSupply).div(5);
+      expectedChange = new BigNumber(totalSupply).div(20).mul(3);
       blockNumber = endBlock + FOUNDER_LOCKUP + 1;
       return contract.balanceOf(founder);
     }).then((result) => {

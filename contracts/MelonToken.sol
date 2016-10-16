@@ -14,12 +14,12 @@ contract MelonToken is ERC20, SafeMath {
     uint public constant DECIMALS = 18;
 
     // Constant contribution specific fields
-    uint public constant ETHER_CAP = 1000000 ether; // max amount raised during contribution (5.5M USD worth of ether will be measured with market price at beginning of the contribution)
+    uint public constant ETHER_CAP = 2000000 ether; // max amount raised during contribution
     uint public constant POWER_HOUR = 250; // highest discount for the first 250 blks or roughly first hour
     uint public constant TRANSFER_LOCKUP = 370285; // transfers are locked for this many blocks after endBlock (assuming 14 second blocks, this is 2 months)
     uint public constant FOUNDER_LOCKUP = 2252571; // founder allocation cannot be created until this many blocks after endBlock (assuming 14 second blocks, this is 1 year)
-    uint public constant MELONPORT_PERCENT_ALLOCATION = 20; // 20% of token supply allocated post-contribution for the melonport fund
-    uint public constant FOUNDER_PERCENT_ALLOCATION = 20; // 20% of token supply allocated post-contribution for the founder allocation
+    uint public constant MELONPORT_PERCENT_ALLOCATION = 10; // 10% of token supply allocated post-contribution for the melonport fund
+    uint public constant FOUNDER_PERCENT_ALLOCATION = 15; // 15% of token supply allocated post-contribution for the founder allocation
 
     // Fields that are only changed in constructor
     uint public startBlock; // contribution start block (set in constructor)
