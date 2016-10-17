@@ -315,7 +315,7 @@ contract('MelonToken', (accounts) => {
       initialFounderBalance = result;
       return contract.setBlockNumber(blockNumber, {from: founder, value: 0});
     }).then((result) => {
-      return contract.allocateMelonportTokens({from: founder, value: 0});
+      return contract.allocateOrganizationTokens({from: founder, value: 0});
     }).then((result) => {
       return contract.balanceOf(founder);
     }).then((result) => {
@@ -331,7 +331,7 @@ contract('MelonToken', (accounts) => {
   });
 
   it('Test melonport allocation twice', (done) => {
-    contract.allocateMelonportTokens({from: founder, value: 0
+    contract.allocateOrganizationTokens({from: founder, value: 0
     }).then((result) => {
       assert.fail();
     }).catch((err) => {
@@ -343,7 +343,7 @@ contract('MelonToken', (accounts) => {
   it('Test founder token allocation too early', (done) => {
     var blockNumber = endBlock + FOUNDER_LOCKUP;
     contract.setBlockNumber(blockNumber, {from: founder, value: 0}).then((result) => {
-      return contract.allocateFounderTokens({from: founder, value: 0});
+      return contract.allocateCompanyTokens({from: founder, value: 0});
     }).then((result) => {
       assert.fail();
     }).catch((err) => {
@@ -366,7 +366,7 @@ contract('MelonToken', (accounts) => {
       initialFounderBalance = result;
       return contract.setBlockNumber(blockNumber, {from: founder, value: 0});
     }).then((result) => {
-      return contract.allocateFounderTokens({from: founder, value: 0});
+      return contract.allocateCompanyTokens({from: founder, value: 0});
     }).then((result) => {
       return contract.balanceOf(founder);
     }).then((result) => {
@@ -382,7 +382,7 @@ contract('MelonToken', (accounts) => {
   });
 
   it('Test founder token allocation twice', (done) => {
-    contract.allocateFounderTokens({from: founder, value: 0
+    contract.allocateCompanyTokens({from: founder, value: 0
     }).then((result) => {
       assert.fail();
     }).catch((err) => {
