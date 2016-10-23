@@ -1,5 +1,8 @@
 # melon
+
 Token contracts of the melon protocol contribution.
+
+[![Gitter](https://badges.gitter.im/melonproject/general.svg)](https://gitter.im/melonproject/general?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ## Installation
 
@@ -30,4 +33,4 @@ After installation is complete, go to the above `melon` directory, open a termin
 
 ## Acknowledgements
 
-These token contracts have been heavily influenced by the work of [FirstBlood](https://github.com/Firstbloodio/token).
+These token contracts have been influenced by the work of [FirstBlood](https://github.com/Firstbloodio/token).
