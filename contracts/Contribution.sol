@@ -1,3 +1,5 @@
+pragma solidity ^0.4.2;
+
 import "./dependencies/SafeMath.sol";
 import "./dependencies/ERC20.sol";
 import "./tokens/MelonToken.sol";
@@ -11,10 +13,10 @@ contract Contribution is SafeMath {
 
     // Constant contribution specific fields
     uint public constant ETHER_CAP = 2000000 ether; // max amount raised during contribution
-    uint public constant POWER_HOUR = 250; // highest discount for the first 250 blks or roughly first hour
+    uint public constant EARLY_BIRD = 250; // highest discount for the first 250 blks or roughly first hour
     uint public constant TRANSFER_LOCKUP = 370285; // transfers are locked for this many blocks after endBlock (assuming 14 second blocks, this is 2 months)
     uint public constant FOUNDER_LOCKUP = 2252571; // founder allocation cannot be created until this many blocks after endBlock (assuming 14 second blocks, this is 1 year)
-    uint public constant ORGANIZATION_PERCENT_ALLOCATION = 10; // 10% of token supply allocated post-contribution for the organization fund
+    uint public constant ORGANIZATION_PERCENT_ALLOCATION = 10; // 10% of token supply allocated post-contribution for the foundation fund
     uint public constant COMPANY_PERCENT_ALLOCATION = 15; // 15% of token supply allocated post-contribution for the companies allocation
 
     // Fields that are only changed in constructor
@@ -26,13 +28,14 @@ contract Contribution is SafeMath {
     // Fields that can be changed by functions
     uint public presaleEtherRaised = 0; // this will keep track of the Ether raised during the contribution
     uint public presaleTokenSupply = 0; // this will keep track of the token supply created during the contribution
-    bool public organizationAllocated = false; // this will change to true when the organization fund is allocated
+    bool public foundationAllocated = false; // this will change to true when the foundation fund is allocated
     bool public companyAllocated = false; // this will change to true when the founder fund is allocated
     bool public halted = false; // the founder address can set this to true to halt the contribution due to emergency
 
     // Fields representing external contracts
     MelonToken public melonToken;
-    PrivateToken public privateToken;
+    // TODO: Own contract instance for PrivateToken
+    MelonToken public privateToken;
 
     // EVENTS
 
@@ -45,57 +48,57 @@ contract Contribution is SafeMath {
     modifier is_signer(uint8 v, bytes32 r, bytes32 s) {
         bytes32 hash = sha256(msg.sender);
         if (ecrecover(hash,v,r,s) != signer) throw;
-        _
+        _;
     }
 
     modifier only_founder() {
         if (msg.sender != founder) throw;
-        _
+        _;
     }
 
     modifier is_not_halted() {
         if (halted) throw;
-        _
+        _;
     }
 
     modifier ether_cap_not_reached() {
         if (safeAdd(presaleEtherRaised, msg.value) > ETHER_CAP) throw;
-        _
+        _;
     }
 
     modifier msg_value_well_formed() {
         if (msg.value < 1000 || msg.value % 1000 != 0) throw;
-        _
+        _;
     }
 
     modifier block_number_at_least(uint x) {
         if (!(x <= block.number)) throw;
-        _
+        _;
     }
 
     modifier block_number_past(uint x) {
         if (!(x < block.number)) throw;
-        _
+        _;
     }
 
     modifier block_number_at_most(uint x) {
         if (!(block.number <= x)) throw;
-        _
+        _;
     }
 
-    modifier when_organization_not_allocated() {
-        if (organizationAllocated) throw;
-        _
+    modifier when_foundation_not_allocated() {
+        if (foundationAllocated) throw;
+        _;
     }
 
-    modifier when_organization_is_allocated() {
-        if (!organizationAllocated) throw;
-        _
+    modifier when_foundation_is_allocated() {
+        if (!foundationAllocated) throw;
+        _;
     }
 
     modifier when_company_not_allocated() {
         if (companyAllocated) throw;
-        _
+        _;
     }
 
     // METHODS
@@ -109,7 +112,8 @@ contract Contribution is SafeMath {
         endBlock = endBlockInput;
 
         melonToken = new MelonToken(this, startBlock, endBlock);
-        privateToken = new PrivateToken(this, startBlock, endBlock);
+        // TODO: Own contract instance for PrivateToken
+        privateToken = new MelonToken(this, startBlock, endBlock);
     }
 
     /// Pre: All contribution depositors must have read the legal agreement.
@@ -124,7 +128,7 @@ contract Contribution is SafeMath {
     /// Post: Contribution price in mMLN/ETH, where 1 MLN == 1000 mMLN
     function price() constant returns(uint)
     {
-        if (block.number>=startBlock && block.number<startBlock+POWER_HOUR) return 1100; //power hour
+        if (block.number>=startBlock && block.number<startBlock+EARLY_BIRD) return 1100; //power hour
         if (block.number<startBlock || block.number>endBlock) return 1000; //default price
         return 1000 + 4*(endBlock - block.number)/(endBlock - startBlock + 1)*100/4; //contribution price
     }
@@ -159,7 +163,7 @@ contract Contribution is SafeMath {
     function allocateCompanyTokens()
         only_founder()
         block_number_past(endBlock + FOUNDER_LOCKUP)
-        when_organization_is_allocated()
+        when_foundation_is_allocated()
         when_company_not_allocated()
     {
         var founder_allocation = presaleTokenSupply * COMPANY_PERCENT_ALLOCATION / 100;
@@ -171,16 +175,16 @@ contract Contribution is SafeMath {
 
     /// Pre: Everybody (to prevent inflation gains), after contribution period has ended.
     /// Post: Fix presaleTokenSupply raised. Allocate funds of Melonport to founder address.
-    function allocateOrganizationTokens()
+    function allocateFoundationTokens()
         block_number_past(endBlock)
-        when_organization_not_allocated()
+        when_foundation_not_allocated()
     {
-        //TODO: cleaner
+        // TODO: Consider, that totalSupply differs btw Tokens!
         presaleTokenSupply = melonToken.totalSupply();
-        var organization_allocation = presaleTokenSupply * ORGANIZATION_PERCENT_ALLOCATION / 100;
-        melonToken.mintToken(founder, organization_allocation);
-        privateToken.mintToken(founder, organization_allocation);
-        organizationAllocated = true;
+        var foundation_allocation = presaleTokenSupply * ORGANIZATION_PERCENT_ALLOCATION / 100;
+        melonToken.mintToken(founder, foundation_allocation);
+        privateToken.mintToken(founder, foundation_allocation);
+        foundationAllocated = true;
         AllocateMelonportTokens(msg.sender);
     }
 

@@ -1,9 +1,10 @@
+pragma solidity ^0.4.2;
+
 import "../dependencies/SafeMath.sol";
 import "../dependencies/ERC20.sol";
 
 /// @title Melon Token Contract
 /// @author Melonport AG <team@melonport.com>
-/// @notice Original taken from https://github.com/Firstbloodio/token
 contract MelonToken is ERC20, SafeMath {
 
     // FILEDS
@@ -13,22 +14,27 @@ contract MelonToken is ERC20, SafeMath {
     string public constant SYMBOL = "MLN";
     uint public constant DECIMALS = 18;
     uint public constant TRANSFER_LOCKUP = 370285; // transfers are locked for this many blocks after endBlock (assuming 14 second blocks, this is 2 months)
+    uint public constant THAWING_PERIOD = 2252571; // founder allocation cannot be created until this many blocks after endBlock (assuming 14 second blocks, this is 1 year)
+
 
     // Fields that are only changed in constructor
     address public creator;
     uint public startBlock; // contribution start block (set in constructor)
     uint public endBlock; // contribution end block (set in constructor)
 
+    // Fields that can be changed by functions
+    mapping (address => uint) lockedBalances;
+
     // MODIFIERS
 
     modifier only_creator() {
         if (msg.sender != creator) throw;
-        _
+        _;
     }
 
     modifier block_number_past(uint x) {
         if (!(x < block.number)) throw;
-        _
+        _;
     }
 
     // METHODS
@@ -51,6 +57,15 @@ contract MelonToken is ERC20, SafeMath {
     {
         balances[recipient] = safeAdd(balances[recipient], tokens);
         totalSupply = safeAdd(totalSupply, tokens);
+    }
+
+    // Pre: Thawing period has passed
+    // Post: All funds available for trade
+    function unlockBalance(address _who)
+        block_number_past(endBlock + THAWING_PERIOD)
+    {
+        balances[_who] = safeAdd(balances[_who], lockedBalances[_who]);
+        lockedBalances[_who] = 0;
     }
 
     /// Pre: Prevent transfers until freeze period is over.

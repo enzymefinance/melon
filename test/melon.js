@@ -315,7 +315,7 @@ contract('MelonToken', (accounts) => {
       initialFounderBalance = result;
       return contract.setBlockNumber(blockNumber, {from: founder, value: 0});
     }).then((result) => {
-      return contract.allocateOrganizationTokens({from: founder, value: 0});
+      return contract.allocateFoundationTokens({from: founder, value: 0});
     }).then((result) => {
       return contract.balanceOf(founder);
     }).then((result) => {
@@ -331,7 +331,7 @@ contract('MelonToken', (accounts) => {
   });
 
   it('Test melonport allocation twice', (done) => {
-    contract.allocateOrganizationTokens({from: founder, value: 0
+    contract.allocateFoundationTokens({from: founder, value: 0
     }).then((result) => {
       assert.fail();
     }).catch((err) => {

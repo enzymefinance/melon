@@ -1,3 +1,5 @@
+pragma solidity ^0.4.2;
+
 /// @title ERC20 Token Protocol
 /// @author Melonport AG <team@melonport.com>
 /// @notice Original taken from https://github.com/ethereum/EIPs/issues/20

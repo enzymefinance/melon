@@ -1,3 +1,5 @@
+pragma solidity ^0.4.2;
+
 /// @title Overflow aware uint math functions.
 /// @author Melonport AG <team@melonport.com>
 /// @notice Taken from https://github.com/Firstbloodio/token
