@@ -49,12 +49,15 @@ contract MelonToken_test is ERC20, SafeMath {
         throw;
     }
 
+    uint public test = 0;
+
     // Pre: Address of creator is known, i.e. Contribution contract
     // Post: Mints Token
     function mintToken(address recipient, uint tokens)
         external
         only_creator
     {
+        test = 1;
         balances[recipient] = safeAdd(balances[recipient], tokens);
         totalSupply = safeAdd(totalSupply, tokens);
     }

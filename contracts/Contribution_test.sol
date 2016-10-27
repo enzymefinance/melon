@@ -36,8 +36,8 @@ contract Contribution_test is SafeMath {
 
     // Fields representing external contracts
     // TODO: Own contract instance for PrivateToken
-    MelonToken public melonToken;
-    MelonToken public privateToken;
+    MelonToken public melonToken = new MelonToken(this, startBlock, endBlock);
+    MelonToken public privateToken = new MelonToken(this, startBlock, endBlock);
 
     // EVENTS
 
@@ -112,10 +112,6 @@ contract Contribution_test is SafeMath {
         signer = signerInput;
         startBlock = startBlockInput;
         endBlock = endBlockInput;
-
-        // TODO: Own contract instance for PrivateToken
-        melonToken = new MelonToken(this, startBlock, endBlock);
-        privateToken = new MelonToken(this, startBlock, endBlock);
     }
 
     /// Pre: All contribution depositors must have read the legal agreement.
@@ -171,13 +167,14 @@ contract Contribution_test is SafeMath {
 
     /// Pre: Buy entry point, msg.value non-zero multiplier of 1000 WEI
     /// Post: Buy MLN
-    function buy(uint8 v, bytes32 r, bytes32 s) {
+    function buy(uint8 v, bytes32 r, bytes32 s) payable {
         buyRecipient(msg.sender, v, r, s);
     }
 
     /// Pre: Buy on behalf of a recipient, msg.value non-zero multiplier of 1000 WEI
     /// Post: Buy MLN, send msg.value to founder address
     function buyRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
+        payable
         is_signer(v, r, s)
         block_number_at_least(startBlock)
         block_number_at_most(endBlock)
@@ -185,9 +182,9 @@ contract Contribution_test is SafeMath {
         msg_value_well_formed()
         ether_cap_not_reached()
     {
-        uint tokens = safeMul(msg.value / UNIT, price()); // to avoid decimal numbers
-        melonToken.mintToken(recipient, tokens);
-        privateToken.mintToken(recipient, tokens);
+        uint tokens = safeMul(msg.value / UNIT, testPrice()); // to avoid decimal numbers
+        melonToken.mintToken(recipient, tokens / 3);
+        privateToken.mintToken(recipient, 2 * tokens / 3);
         presaleEtherRaised = safeAdd(presaleEtherRaised, msg.value);
         if(!founder.send(msg.value)) throw; //immediately send Ether to founder address
         Buy(recipient, msg.value, tokens);
