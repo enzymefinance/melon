@@ -4,8 +4,10 @@ var BigNumber = require('bignumber.js');
 var sha256 = require('js-sha256').sha256;
 
 //Config
-var startBlock = 2377200; //11-01-2016 midnight UTC assuming 14 second blocks
-var endBlock = 2384400; //11-29-2016 midnight UTC assuming 14 second blocks
+const startBlock = 2377200; //11-01-2016 midnight UTC assuming 14 second blocks
+const blocksPerWeek = 41710;
+const timePeriod = 6*blocksPerWeek;
+const endBlock = startBlock + timePeriod; //11-29-2016 midnight UTC assuming 14 second blocks
 
 
 function sign(web3, address, value, callback) {

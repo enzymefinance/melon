@@ -16,8 +16,10 @@ contract Contribution is SafeMath {
     uint public constant EARLY_BIRD = 250; // highest discount for the first 250 blks or roughly first hour
     uint public constant TRANSFER_LOCKUP = 370285; // transfers are locked for this many blocks after endBlock (assuming 14 second blocks, this is 2 months)
     uint public constant FOUNDER_LOCKUP = 2252571; // founder allocation cannot be created until this many blocks after endBlock (assuming 14 second blocks, this is 1 year)
-    uint public constant ORGANIZATION_PERCENT_ALLOCATION = 10; // 10% of token supply allocated post-contribution for the foundation fund
+    uint public constant FOUNDATION_PERCENT_ALLOCATION = 10; // 10% of token supply allocated post-contribution for the foundation fund
     uint public constant COMPANY_PERCENT_ALLOCATION = 15; // 15% of token supply allocated post-contribution for the companies allocation
+    uint constant BLKS_PER_WEEK = 41710;
+    uint constant UNIT = 10**3; // MILLI [m]
 
     // Fields that are only changed in constructor
     uint public startBlock; // contribution start block (set in constructor)
@@ -33,8 +35,8 @@ contract Contribution is SafeMath {
     bool public halted = false; // the founder address can set this to true to halt the contribution due to emergency
 
     // Fields representing external contracts
-    MelonToken public melonToken;
     // TODO: Own contract instance for PrivateToken
+    MelonToken public melonToken;
     MelonToken public privateToken;
 
     // EVENTS
@@ -67,7 +69,7 @@ contract Contribution is SafeMath {
     }
 
     modifier msg_value_well_formed() {
-        if (msg.value < 1000 || msg.value % 1000 != 0) throw;
+        if (msg.value < UNIT || msg.value % UNIT != 0) throw;
         _;
     }
 
@@ -111,8 +113,8 @@ contract Contribution is SafeMath {
         startBlock = startBlockInput;
         endBlock = endBlockInput;
 
-        melonToken = new MelonToken(this, startBlock, endBlock);
         // TODO: Own contract instance for PrivateToken
+        melonToken = new MelonToken(this, startBlock, endBlock);
         privateToken = new MelonToken(this, startBlock, endBlock);
     }
 
@@ -125,23 +127,30 @@ contract Contribution is SafeMath {
     }
 
     /// Pre: startBlcok, endBlock specified in constructor
-    /// Post: Contribution price in mMLN/ETH, where 1 MLN == 1000 mMLN
+    /// Post: Contribution price in m{MLN+DPT}/ETH, where 1 MLN == 1000 mMLN, 1 DPT == 1000 mDPT
     function price() constant returns(uint)
     {
-        if (block.number>=startBlock && block.number<startBlock+EARLY_BIRD) return 1100; //power hour
-        if (block.number<startBlock || block.number>endBlock) return 1000; //default price
-        return 1000 + 4*(endBlock - block.number)/(endBlock - startBlock + 1)*100/4; //contribution price
+        // Discount tiers
+        if (block.number>=startBlock && block.number<startBlock+EARLY_BIRD)
+            return 1100;
+        if (block.number>=startBlock + EARLY_BIRD && block.number < startBlock + 2*BLKS_PER_WEEK)
+            return 1066;
+        if (block.number>=startBlock + 2*BLKS_PER_WEEK && block.number < startBlock + 4*BLKS_PER_WEEK)
+            return 1033;
+        if (block.number>=startBlock + 4*BLKS_PER_WEEK && block.number < startBlock + 6*BLKS_PER_WEEK)
+            return 1000;
+        // Before or after contribution period
+        return 0;
     }
 
-    /// Pre: Buy entry point
+    /// Pre: Buy entry point, msg.value non-zero multiplier of 1000 WEI
     /// Post: Buy MLN
     function buy(uint8 v, bytes32 r, bytes32 s) {
         buyRecipient(msg.sender, v, r, s);
     }
 
-    /// Pre: Buy on behalf of a recipient, msg.value multiplier of 1000 WEI
+    /// Pre: Buy on behalf of a recipient, msg.value non-zero multiplier of 1000 WEI
     /// Post: Buy MLN, send msg.value to founder address
-    /// Invariant: 1000 mMLN/ETH <= price() <= 1100 mMLN/ETH
     function buyRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         is_signer(v, r, s)
         block_number_at_least(startBlock)
@@ -150,7 +159,7 @@ contract Contribution is SafeMath {
         msg_value_well_formed()
         ether_cap_not_reached()
     {
-        uint tokens = safeMul(msg.value / 1000, price()); // to avoid decimal numbers
+        uint tokens = safeMul(msg.value / UNIT, price()); // to avoid decimal numbers
         melonToken.mintToken(recipient, tokens);
         privateToken.mintToken(recipient, tokens);
         presaleEtherRaised = safeAdd(presaleEtherRaised, msg.value);
@@ -180,8 +189,9 @@ contract Contribution is SafeMath {
         when_foundation_not_allocated()
     {
         // TODO: Consider, that totalSupply differs btw Tokens!
-        presaleTokenSupply = melonToken.totalSupply();
-        var foundation_allocation = presaleTokenSupply * ORGANIZATION_PERCENT_ALLOCATION / 100;
+        presaleTokenSupply = melonToken.totalSupply() + privateToken.totalSupply();
+        var foundation_allocation = presaleTokenSupply * FOUNDATION_PERCENT_ALLOCATION / 100;
+        // TODO mint foundation token to illiquid part
         melonToken.mintToken(founder, foundation_allocation);
         privateToken.mintToken(founder, foundation_allocation);
         foundationAllocated = true;
