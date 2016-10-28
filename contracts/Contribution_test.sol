@@ -7,6 +7,8 @@ import "./tokens/PolkaDotToken.sol";
 
 /// @title Contribution_test Contract
 /// @author Melonport AG <team@melonport.com>
+/// @notice This follows Condition-Orientated Programming guideline as outlined here:
+///   https://medium.com/@gavofyork/condition-orientated-programming-969f6ba0161a#.saav3bvva
 contract Contribution_test is SafeMath {
 
     // FILEDS
@@ -92,26 +94,50 @@ contract Contribution_test is SafeMath {
         _;
     }
 
-    modifier is_liquid_tranche_wanted(bool wantLiquidity, address recipient) {
-        if (!(wantLiquidity == true)) throw;
-        // FOR TESTING PURPOSES ONLY: testPrice()
-        uint tokens = safeMul(msg.value / UNIT, testPrice()); // to avoid decimal numbers
-        melonToken.mintLiquidToken(recipient, tokens / 3);
-        polkaDotToken.mintLiquidToken(recipient, 2 * tokens / 3);
-        BuyLiquidTokens(recipient, tokens);
-        _;
+    // FUNCTIONAL METHODS
+
+    /// Pre: startBlcok, endBlock specified in constructor
+    /// Post: Contribution_test price in m{MLN+DPT}/ETH, where 1 MLN == 1000 mMLN, 1 DPT == 1000 mDPT
+    function price(bool wantLiquidity) constant returns(uint)
+    {
+        // One illiquid tier
+        if (wantLiquidity == false && block.number>=startBlock && block.number < endBlock)
+            return 1125;
+        // Four liquid tiers
+        if (block.number>=startBlock && block.number < startBlock + 2*BLKS_PER_WEEK)
+            return 1075;
+        if (block.number>=startBlock + 2*BLKS_PER_WEEK && block.number < startBlock + 4*BLKS_PER_WEEK)
+            return 1050;
+        if (block.number>=startBlock + 4*BLKS_PER_WEEK && block.number < startBlock + 6*BLKS_PER_WEEK)
+            return 1025;
+        if (block.number>=startBlock + 6*BLKS_PER_WEEK && block.number < endBlock)
+            return 1000;
+        // Before or after contribution period
+        return 0;
     }
 
-    modifier is_illiquid_tranche_wanted(bool wantLiquidity, address recipient) {
-      if (!(wantLiquidity == false)) throw;
-      uint tokens = safeMul(msg.value , 1125);
-      melonToken.mintIlliquidToken(recipient, tokens / 3);
-      polkaDotToken.mintIlliquidToken(recipient, 2 * tokens / 3);
-      BuyIliquidTokens(recipient, tokens);
-      _;
+    // FOR TESTING PURPOSES ONLY:
+    /// Pre: Price for a given blockNumber (!= block.number)
+    /// Post: Externally defined blockNumber
+    function testPrice() constant returns(uint)
+    {
+        // One illiquid tier
+        if (wantLiquidity == false && blockNumber>=startBlock && blockNumber < endBlock)
+            return 1125;
+        // Four liquid tiers
+        if (blockNumber>=startBlock && blockNumber < startBlock + 2*BLKS_PER_WEEK)
+            return 1075;
+        if (blockNumber>=startBlock + 2*BLKS_PER_WEEK && blockNumber < startBlock + 4*BLKS_PER_WEEK)
+            return 1050;
+        if (blockNumber>=startBlock + 4*BLKS_PER_WEEK && blockNumber < startBlock + 6*BLKS_PER_WEEK)
+            return 1025;
+        if (blockNumber>=startBlock + 6*BLKS_PER_WEEK && blockNumber < startBlock + 8*BLKS_PER_WEEK)
+            return 1000;
+        // Before or after contribution period
+        return 0;
     }
 
-    // METHODS
+    // CONDITIONLESS IMPERATIVE METHODS
 
     /// Pre: ALL fields, except { melonport, signer, startBlock, endBlock } IS_VALID
     /// Post: `melonport` IS_VALID, `signer` ID_VALID, `startBlock` IS_VALID, `end_block` IS_VALID.
@@ -129,41 +155,6 @@ contract Contribution_test is SafeMath {
     ///  all deposits that do not have signature you receive after reading terms.
     function() {
         throw;
-    }
-
-    /// Pre: startBlcok, endBlock specified in constructor
-    /// Post: Contribution_test price in m{MLN+DPT}/ETH, where 1 MLN == 1000 mMLN, 1 DPT == 1000 mDPT
-    function price() constant returns(uint)
-    {
-        // Discount tiers
-        if (block.number>=startBlock && block.number < startBlock + 2*BLKS_PER_WEEK)
-            return 1075;
-        if (block.number>=startBlock + 2*BLKS_PER_WEEK && block.number < startBlock + 4*BLKS_PER_WEEK)
-            return 1050;
-        if (block.number>=startBlock + 4*BLKS_PER_WEEK && block.number < startBlock + 6*BLKS_PER_WEEK)
-            return 1025;
-        if (block.number>=startBlock + 6*BLKS_PER_WEEK && block.number < startBlock + 8*BLKS_PER_WEEK)
-            return 1000;
-        // Before or after contribution period
-        return 0;
-    }
-
-    // FOR TESTING PURPOSES ONLY:
-    /// Pre: Price for a given blockNumber (!= block.number)
-    /// Post: Externally defined blockNumber
-    function testPrice() constant returns(uint)
-    {
-        // Discount tiers
-        if (blockNumber>=startBlock && blockNumber < startBlock + 2*BLKS_PER_WEEK)
-            return 1075;
-        if (blockNumber>=startBlock + 2*BLKS_PER_WEEK && blockNumber < startBlock + 4*BLKS_PER_WEEK)
-            return 1050;
-        if (blockNumber>=startBlock + 4*BLKS_PER_WEEK && blockNumber < startBlock + 6*BLKS_PER_WEEK)
-            return 1025;
-        if (blockNumber>=startBlock + 6*BLKS_PER_WEEK && blockNumber < startBlock + 8*BLKS_PER_WEEK)
-            return 1000;
-        // Before or after contribution period
-        return 0;
     }
 
     // FOR TESTING PURPOSES ONLY:
@@ -190,9 +181,18 @@ contract Contribution_test is SafeMath {
         is_not_halted()
         msg_value_well_formed()
         ether_cap_not_reached()
-        is_liquid_tranche_wanted(wantLiquidity, recipient)
-        is_illiquid_tranche_wanted(wantLiquidity, recipient)
     {
+        // FOR TESTING PURPOSES ONLY: testPrice()
+        uint tokens = safeMul(msg.value / UNIT, testPrice(wantLiquidity)); // to avoid decimal numbers
+        if (wantLiquidity == true) {
+            melonToken.mintLiquidToken(recipient, tokens / 3);
+            polkaDotToken.mintLiquidToken(recipient, 2 * tokens / 3);
+            BuyLiquidTokens(recipient, tokens);
+        } else {
+            melonToken.mintIlliquidToken(recipient, tokens / 3);
+            polkaDotToken.mintIlliquidToken(recipient, 2 * tokens / 3);
+            BuyIliquidTokens(recipient, tokens);
+        }
         presaleEtherRaised = safeAdd(presaleEtherRaised, msg.value);
         if(!melonport.send(msg.value)) throw; //immediately send Ether to melonport address
         Buy(recipient, msg.value);
