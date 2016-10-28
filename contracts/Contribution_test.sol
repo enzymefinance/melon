@@ -202,15 +202,12 @@ contract Contribution_test is SafeMath {
     /// Post: Allocate funds of the two companies to their company address.
     function allocateCompanyTokens()
         only_melonport()
-        block_number_past(endBlock + FOUNDER_LOCKUP)
         when_company_not_allocated()
     {
-        //TODO: insert parity address as founder
-        uint company_allocation = ETHER_CAP * COMPANY_PERCENT_ALLOCATION / 100;
-        melonToken.mintIlliquidToken(melonport, company_allocation / 3);
-        melonToken.mintIlliquidToken(parity, company_allocation / 3);
-        polkaDotToken.mintIlliquidToken(melonport, 2 * ETHER_CAP * 75 / 30000); // 0.75 for melonport
-        polkaDotToken.mintIlliquidToken(parity, 2 * ETHER_CAP * 1425 / 30000); // 14.25 for parity
+        melonToken.mintIlliquidToken(melonport, ETHER_CAP * 1200 / 30000); // 12 percent for melonport
+        melonToken.mintIlliquidToken(parity, ETHER_CAP * 300 / 30000); // 3 percent for parity
+        polkaDotToken.mintIlliquidToken(melonport, 2 * ETHER_CAP * 75 / 30000); // 0.75 percent for melonport
+        polkaDotToken.mintIlliquidToken(parity, 2 * ETHER_CAP * 1425 / 30000); // 14.25 percent for parity
         companyAllocated = true;
         AllocateCompanyTokens(msg.sender);
     }
