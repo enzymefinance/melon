@@ -8,7 +8,7 @@ import "./tokens/PolkaDotToken.sol";
 /// @title Contribution_test Contract
 /// @author Melonport AG <team@melonport.com>
 /// @notice This follows Condition-Orientated Programming guideline as outlined here:
-///   https://medium.com/@gavofyork/condition-orientated-programming-969f6ba0161a#.saav3bvva
+/// @notice   https://medium.com/@gavofyork/condition-orientated-programming-969f6ba0161a#.saav3bvva
 contract Contribution_test is SafeMath {
 
     // FILEDS
@@ -16,9 +16,6 @@ contract Contribution_test is SafeMath {
     // Constant contribution specific fields
     uint public constant ETHER_CAP = 1800000 ether; // max amount raised during contribution
     uint public constant EARLY_BIRD = 250; // highest discount for the first 250 blks or roughly first hour
-    uint public constant TRANSFER_LOCKUP = 370285; // transfers are locked for this many blocks after endBlock (assuming 14 second blocks, this is 2 months)
-    uint public constant FOUNDER_LOCKUP = 2252571; // melonport allocation cannot be created until this many blocks after endBlock (assuming 14 second blocks, this is 1 year)
-    uint public constant COMPANY_PERCENT_ALLOCATION = 15; // 15% of token supply allocated post-contribution for the companies allocation
     uint constant BLKS_PER_WEEK = 41710;
     uint constant UNIT = 10**3; // MILLI [m]
 
@@ -41,9 +38,7 @@ contract Contribution_test is SafeMath {
 
     // EVENTS
 
-    event Buy(address indexed sender, uint eth);
-    event BuyLiquidTokens(address indexed sender, uint tokens);
-    event BuyIliquidTokens(address indexed sender, uint tokens);
+    event Buy(address indexed sender, uint eth, uint tokens);
     event AllocateCompanyTokens(address indexed sender);
 
     // MODIFIERS
@@ -119,7 +114,7 @@ contract Contribution_test is SafeMath {
     // FOR TESTING PURPOSES ONLY:
     /// Pre: Price for a given blockNumber (!= block.number)
     /// Post: Externally defined blockNumber
-    function testPrice() constant returns(uint)
+    function testPrice(bool wantLiquidity) constant returns(uint)
     {
         // One illiquid tier
         if (wantLiquidity == false && blockNumber>=startBlock && blockNumber < endBlock)
@@ -137,7 +132,7 @@ contract Contribution_test is SafeMath {
         return 0;
     }
 
-    // CONDITIONLESS IMPERATIVE METHODS
+    // NON-CONDITIONAL IMPERATIVAL METHODS
 
     /// Pre: ALL fields, except { melonport, signer, startBlock, endBlock } IS_VALID
     /// Post: `melonport` IS_VALID, `signer` ID_VALID, `startBlock` IS_VALID, `end_block` IS_VALID.
@@ -153,9 +148,7 @@ contract Contribution_test is SafeMath {
     ///  This is confirmed by having them signing the terms of service on the website.
     /// Post: Rejects sent amount, buy() takes this signature as input and rejects
     ///  all deposits that do not have signature you receive after reading terms.
-    function() {
-        throw;
-    }
+    function() {}
 
     // FOR TESTING PURPOSES ONLY:
     /// Pre: Assuming parts of code used where block.number is replaced (testcase) w blockNumber
@@ -167,7 +160,9 @@ contract Contribution_test is SafeMath {
 
     /// Pre: Buy entry point, msg.value non-zero multiplier of 1000 WEI
     /// Post: Buy MLN
-    function buy(bool wantLiquidity, uint8 v, bytes32 r, bytes32 s) payable {
+    function buy(bool wantLiquidity, uint8 v, bytes32 r, bytes32 s)
+        payable
+    {
         buyRecipient(wantLiquidity, msg.sender, v, r, s);
     }
 
@@ -185,20 +180,20 @@ contract Contribution_test is SafeMath {
         // FOR TESTING PURPOSES ONLY: testPrice()
         uint tokens = safeMul(msg.value / UNIT, testPrice(wantLiquidity)); // to avoid decimal numbers
         if (wantLiquidity == true) {
+            //TODO: check if functions execute
             melonToken.mintLiquidToken(recipient, tokens / 3);
             polkaDotToken.mintLiquidToken(recipient, 2 * tokens / 3);
-            BuyLiquidTokens(recipient, tokens);
         } else {
+            //TODO: check if functions execute
             melonToken.mintIlliquidToken(recipient, tokens / 3);
             polkaDotToken.mintIlliquidToken(recipient, 2 * tokens / 3);
-            BuyIliquidTokens(recipient, tokens);
         }
         presaleEtherRaised = safeAdd(presaleEtherRaised, msg.value);
         if(!melonport.send(msg.value)) throw; //immediately send Ether to melonport address
-        Buy(recipient, msg.value);
+        Buy(recipient, msg.value, tokens);
     }
 
-    /// Pre: Fixed presaleTokenSupply. Founder, after freeze period plus melonport lockup period is over
+    /// Pre: Melonport even before contribution period
     /// Post: Allocate funds of the two companies to their company address.
     function allocateCompanyTokens()
         only_melonport()
