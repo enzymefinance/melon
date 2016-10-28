@@ -7,7 +7,7 @@ import "./tokens/PolkaDotToken.sol";
 
 /// @title Contribution_test Contract
 /// @author Melonport AG <team@melonport.com>
-/// @notice This follows Condition-Orientated Programming guideline as outlined here:
+/// @notice This follows Condition-Orientated Programming as outlined here:
 /// @notice   https://medium.com/@gavofyork/condition-orientated-programming-969f6ba0161a#.saav3bvva
 contract Contribution_test is SafeMath {
 
@@ -15,7 +15,6 @@ contract Contribution_test is SafeMath {
 
     // Constant contribution specific fields
     uint public constant ETHER_CAP = 1800000 ether; // max amount raised during contribution
-    uint public constant EARLY_BIRD = 250; // highest discount for the first 250 blks or roughly first hour
     uint constant BLKS_PER_WEEK = 41710;
     uint constant UNIT = 10**3; // MILLI [m]
 
@@ -30,7 +29,7 @@ contract Contribution_test is SafeMath {
     uint public presaleEtherRaised = 0; // this will keep track of the Ether raised during the contribution
     uint public presaleTokenSupply = 0; // this will keep track of the token supply created during the contribution
     bool public companyAllocated = false; // this will change to true when the company funds are allocated
-    bool public halted = false; // the melonport address can set this to true to halt the contribution due to emergency
+    bool public halted = false; // the melonport address can set this to true to halt the contribution due to an emergency
 
     // Fields representing external contracts
     MelonToken public melonToken = new MelonToken(this, startBlock, endBlock);
@@ -144,10 +143,10 @@ contract Contribution_test is SafeMath {
         endBlock = endBlockInput;
     }
 
-    /// Pre: All contribution depositors must have read the legal agreement.
-    ///  This is confirmed by having them signing the terms of service on the website.
+    /// Pre: All contribution depositors must have read and accpeted
+    ///  the legal agreement on https://contribution.melonport.com.
     /// Post: Rejects sent amount, buy() takes this signature as input and rejects
-    ///  all deposits that do not have signature you receive after reading terms.
+    ///  all deposits that do not have signature you receive after reading the terms and conditions.
     function() {}
 
     // FOR TESTING PURPOSES ONLY:

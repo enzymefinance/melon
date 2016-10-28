@@ -64,7 +64,7 @@ contract MelonToken is ERC20, SafeMath {
         totalSupply = safeAdd(totalSupply, tokens);
     }
 
-    /// Pre: Prevent transfers until freeze period is over.
+    /// Pre: Prevent transfers until contribution period is over.
     /// Post: Transfer MLN from msg.sender
     /// Note: ERC 20 Standard Token interface transfer function
     function transfer(address _to, uint256 _value)
@@ -74,7 +74,7 @@ contract MelonToken is ERC20, SafeMath {
         return super.transfer(_to, _value);
     }
 
-    /// Pre: Prevent transfers until freeze period is over.
+    /// Pre: Prevent transfers until contribution period is over.
     /// Post: Transfer MLN from arbitrary address
     /// Note: ERC 20 Standard Token interface transferFrom function
     function transferFrom(address _from, address _to, uint256 _value)
