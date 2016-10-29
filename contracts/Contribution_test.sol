@@ -19,21 +19,19 @@ contract Contribution_test is SafeMath {
     uint constant UNIT = 10**3; // MILLI [m]
 
     // Fields that are only changed in constructor
-    uint public startBlock; // contribution start block (set in constructor)
-    uint public endBlock; // contribution end block (set in constructor)
     address public melonport = 0x0; // All deposited ETH will be instantly forwarded to this address.
     address public parity = 0x0; // Token allocation for company
     address public signer = 0x0; // signer address see function() {} for comments
+    uint public startBlock; // contribution start block (set in constructor)
+    uint public endBlock; // contribution end block (set in constructor)
+    MelonToken public melonToken;
+    PolkaDotToken public polkaDotToken;
 
     // Fields that can be changed by functions
     uint public presaleEtherRaised = 0; // this will keep track of the Ether raised during the contribution
     uint public presaleTokenSupply = 0; // this will keep track of the token supply created during the contribution
     bool public companyAllocated = false; // this will change to true when the company funds are allocated
     bool public halted = false; // the melonport address can set this to true to halt the contribution due to an emergency
-
-    // Fields representing external contracts
-    MelonToken public melonToken = new MelonToken(this, startBlock, endBlock);
-    PolkaDotToken public polkaDotToken = new PolkaDotToken(this, startBlock, endBlock);
 
     // EVENTS
 
@@ -68,18 +66,20 @@ contract Contribution_test is SafeMath {
         _;
     }
 
+    modifier when_company_not_allocated() {
+        if (companyAllocated) throw;
+        _;
+    }
+
+    // FOR TESTING PURPOSES ONLY: blockNumber instead of block.number
     modifier block_number_at_least(uint x) {
         if (!(x <= blockNumber)) throw;
         _;
     }
 
+    // FOR TESTING PURPOSES ONLY: blockNumber instead of block.number
     modifier block_number_at_most(uint x) {
         if (!(blockNumber <= x)) throw;
-        _;
-    }
-
-    modifier when_company_not_allocated() {
-        if (companyAllocated) throw;
         _;
     }
 
@@ -120,7 +120,7 @@ contract Contribution_test is SafeMath {
             return 1050;
         if (blockNumber>=startBlock + 4*BLKS_PER_WEEK && blockNumber < startBlock + 6*BLKS_PER_WEEK)
             return 1025;
-        if (blockNumber>=startBlock + 6*BLKS_PER_WEEK && blockNumber < startBlock + 8*BLKS_PER_WEEK)
+        if (blockNumber>=startBlock + 6*BLKS_PER_WEEK && blockNumber < endBlock)
             return 1000;
         // Before or after contribution period
         return 0;
@@ -130,20 +130,29 @@ contract Contribution_test is SafeMath {
 
     /// Pre: ALL fields, except { melonport, signer, startBlock, endBlock } are valid
     /// Post: All fields, including { melonport, signer, startBlock, endBlock } are valid
-    function Contribution_test(address melonportInput, address parityInput, address signerInput, uint startBlockInput, uint endBlockInput) {
+    function Contribution_test(address melonportInput, address parityInput, address signerInput, uint startBlockInput) {
         melonport = melonportInput;
         parity = parityInput;
         signer = signerInput;
         startBlock = startBlockInput;
-        endBlock = endBlockInput;
+        endBlock = startBlockInput + 8*BLKS_PER_WEEK;
+        // Create Token Contracts
+        melonToken = new MelonToken(this, startBlock, endBlock);
+        polkaDotToken = new PolkaDotToken(this, startBlock, endBlock);
     }
 
-    // FOR TESTING PURPOSES ONLY:
-    /// Pre: Assuming parts of code used where block.number is replaced (testcase) w blockNumber
-    /// Post: Sets blockNumber for testing
-    uint public blockNumber = 0;
-    function setBlockNumber(uint blockNumberInput) {
-        blockNumber = blockNumberInput;
+    /// Pre: Melonport even before contribution period
+    /// Post: Allocate funds of the two companies to their company address.
+    function allocateCompanyTokens()
+        only_melonport()
+        when_company_not_allocated()
+    {
+        melonToken.mintIlliquidToken(melonport, ETHER_CAP * 1200 / 30000); // 12 percent for melonport
+        melonToken.mintIlliquidToken(parity, ETHER_CAP * 300 / 30000); // 3 percent for parity
+        polkaDotToken.mintIlliquidToken(melonport, 2 * ETHER_CAP * 75 / 30000); // 0.75 percent for melonport
+        polkaDotToken.mintIlliquidToken(parity, 2 * ETHER_CAP * 1425 / 30000); // 14.25 percent for parity
+        companyAllocated = true;
+        AllocateCompanyTokens(msg.sender);
     }
 
     /// Pre: Buy entry point, msg.value non-zero multiplier of UNIT wei, where 1 wei = 10 ** (-18) ether
@@ -168,7 +177,7 @@ contract Contribution_test is SafeMath {
         msg_value_well_formed()
         ether_cap_not_reached()
     {
-        // FOR TESTING PURPOSES ONLY: testPrice()
+        // FOR TESTING PURPOSES ONLY: testPrice() instead of price()
         uint tokens = safeMul(msg.value / UNIT, testPrice(wantLiquidity));
         if (wantLiquidity == true) {
             //TODO: check if functions execute
@@ -184,24 +193,18 @@ contract Contribution_test is SafeMath {
         Buy(recipient, msg.value, tokens);
     }
 
-    /// Pre: Melonport even before contribution period
-    /// Post: Allocate funds of the two companies to their company address.
-    function allocateCompanyTokens()
-        only_melonport()
-        when_company_not_allocated()
-    {
-        melonToken.mintIlliquidToken(melonport, ETHER_CAP * 1200 / 30000); // 12 percent for melonport
-        melonToken.mintIlliquidToken(parity, ETHER_CAP * 300 / 30000); // 3 percent for parity
-        polkaDotToken.mintIlliquidToken(melonport, 2 * ETHER_CAP * 75 / 30000); // 0.75 percent for melonport
-        polkaDotToken.mintIlliquidToken(parity, 2 * ETHER_CAP * 1425 / 30000); // 14.25 percent for parity
-        companyAllocated = true;
-        AllocateCompanyTokens(msg.sender);
-    }
-
     function halt() only_melonport() { halted = true; }
 
     function unhalt() only_melonport() { halted = false; }
 
     function changeFounder(address newFounder) only_melonport() { melonport = newFounder; }
+
+    // FOR TESTING PURPOSES ONLY:
+    /// Pre: Assuming parts of code used where block.number is replaced (testcase) w blockNumber
+    /// Post: Sets blockNumber for testing
+    uint public blockNumber = 0;
+    function setBlockNumber(uint blockNumberInput) {
+        blockNumber = blockNumberInput;
+    }
 
 }
