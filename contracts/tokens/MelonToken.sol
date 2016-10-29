@@ -42,8 +42,6 @@ contract MelonToken is ERC20, SafeMath {
         endBlock = endBlockInput;
     }
 
-    function() {}
-
     // Pre: Address of Contribution contract (creator) is known
     // Post: Mints Token into liquid tranche
     function mintLiquidToken(address recipient, uint tokens)

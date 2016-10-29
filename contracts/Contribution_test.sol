@@ -13,9 +13,9 @@ contract Contribution_test is SafeMath {
 
     // FILEDS
 
-    // Constant contribution specific fields
+    // Constant fields
     uint public constant ETHER_CAP = 1800000 ether; // max amount raised during contribution
-    uint constant BLKS_PER_WEEK = 41710;
+    uint constant BLKS_PER_WEEK = 41710; // Rounded result of 3600*24*7/14.5
     uint constant UNIT = 10**3; // MILLI [m]
 
     // Fields that are only changed in constructor
@@ -23,7 +23,7 @@ contract Contribution_test is SafeMath {
     uint public endBlock; // contribution end block (set in constructor)
     address public melonport = 0x0; // All deposited ETH will be instantly forwarded to this address.
     address public parity = 0x0; // Token allocation for company
-    address public signer = 0x0; // signer address (for clickwrap agreement); see function() {} for comments
+    address public signer = 0x0; // signer address see function() {} for comments
 
     // Fields that can be changed by functions
     uint public presaleEtherRaised = 0; // this will keep track of the Ether raised during the contribution
@@ -73,11 +73,6 @@ contract Contribution_test is SafeMath {
         _;
     }
 
-    modifier block_number_past(uint x) {
-        if (!(x < blockNumber)) throw;
-        _;
-    }
-
     modifier block_number_at_most(uint x) {
         if (!(blockNumber <= x)) throw;
         _;
@@ -90,8 +85,8 @@ contract Contribution_test is SafeMath {
 
     // FUNCTIONAL METHODS
 
-    /// Pre: startBlcok, endBlock specified in constructor
-    /// Post: Contribution_test price in m{MLN+DPT}/ETH, where 1 MLN == 1000 mMLN, 1 DPT == 1000 mDPT
+    /// Pre: startBlock, endBlock specified in constructor
+    /// Post: Contribution_test price in m{MLN+PDT}/ETH, where 1 MLN == 1000 mMLN, 1 PDT == 1000 mPDT
     function price(bool wantLiquidity) constant returns(uint)
     {
         // One illiquid tier
@@ -133,8 +128,8 @@ contract Contribution_test is SafeMath {
 
     // NON-CONDITIONAL IMPERATIVAL METHODS
 
-    /// Pre: ALL fields, except { melonport, signer, startBlock, endBlock } IS_VALID
-    /// Post: `melonport` IS_VALID, `signer` ID_VALID, `startBlock` IS_VALID, `end_block` IS_VALID.
+    /// Pre: ALL fields, except { melonport, signer, startBlock, endBlock } are valid
+    /// Post: All fields, including { melonport, signer, startBlock, endBlock } are valid
     function Contribution_test(address melonportInput, address parityInput, address signerInput, uint startBlockInput, uint endBlockInput) {
         melonport = melonportInput;
         parity = parityInput;
@@ -142,12 +137,6 @@ contract Contribution_test is SafeMath {
         startBlock = startBlockInput;
         endBlock = endBlockInput;
     }
-
-    /// Pre: All contribution depositors must have read and accpeted
-    ///  the legal agreement on https://contribution.melonport.com.
-    /// Post: Rejects sent amount, buy() takes this signature as input and rejects
-    ///  all deposits that do not have signature you receive after reading the terms and conditions.
-    function() {}
 
     // FOR TESTING PURPOSES ONLY:
     /// Pre: Assuming parts of code used where block.number is replaced (testcase) w blockNumber
@@ -157,8 +146,10 @@ contract Contribution_test is SafeMath {
         blockNumber = blockNumberInput;
     }
 
-    /// Pre: Buy entry point, msg.value non-zero multiplier of 1000 WEI
-    /// Post: Buy MLN
+    /// Pre: Buy entry point, msg.value non-zero multiplier of UNIT wei, where 1 wei = 10 ** (-18) ether
+    ///  All contribution depositors must have read and accpeted the legal agreement on https://contribution.melonport.com.
+    ///  By doing so they receive the signature sig.v, sig.r and sig.s needed to contribute.
+    /// Post: Bought MLN and PDT tokens accoriding to price() and msg.value
     function buy(bool wantLiquidity, uint8 v, bytes32 r, bytes32 s)
         payable
     {
@@ -166,7 +157,8 @@ contract Contribution_test is SafeMath {
     }
 
     /// Pre: Buy on behalf of a recipient, msg.value non-zero multiplier of 1000 WEI
-    /// Post: Buy MLN, send msg.value to melonport address
+    ///  All contribution depositors must have read and accpeted the legal agreement on https://contribution.melonport.com.
+    /// Post: Bought MLN and PDT tokens on behalf of recipient accoriding to price() and msg.value
     function buyRecipient(bool wantLiquidity, address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer(v, r, s)
@@ -177,7 +169,7 @@ contract Contribution_test is SafeMath {
         ether_cap_not_reached()
     {
         // FOR TESTING PURPOSES ONLY: testPrice()
-        uint tokens = safeMul(msg.value / UNIT, testPrice(wantLiquidity)); // to avoid decimal numbers
+        uint tokens = safeMul(msg.value / UNIT, testPrice(wantLiquidity));
         if (wantLiquidity == true) {
             //TODO: check if functions execute
             melonToken.mintLiquidToken(recipient, tokens / 3);
@@ -188,7 +180,7 @@ contract Contribution_test is SafeMath {
             polkaDotToken.mintIlliquidToken(recipient, 2 * tokens / 3);
         }
         presaleEtherRaised = safeAdd(presaleEtherRaised, msg.value);
-        if(!melonport.send(msg.value)) throw; //immediately send Ether to melonport address
+        if(!melonport.send(msg.value)) throw;
         Buy(recipient, msg.value, tokens);
     }
 
