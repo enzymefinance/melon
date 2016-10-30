@@ -2,8 +2,8 @@ pragma solidity ^0.4.2;
 
 import "./dependencies/SafeMath.sol";
 import "./dependencies/ERC20.sol";
-import "./tokens/MelonToken.sol";
-import "./tokens/PolkaDotToken.sol";
+import "./tokens/MelonToken_test.sol";
+import "./tokens/PolkaDotToken_test.sol";
 
 /// @title Contribution_test Contract
 /// @author Melonport AG <team@melonport.com>
@@ -17,6 +17,7 @@ contract Contribution_test is SafeMath {
     uint public constant ETHER_CAP = 1800000 ether; // max amount raised during contribution
     uint constant BLKS_PER_WEEK = 41710; // Rounded result of 3600*24*7/14.5
     uint constant UNIT = 10**3; // MILLI [m]
+    uint constant ILLIQUID_PRICE = 1125; // One illiquid tier
 
     // Fields that are only changed in constructor
     address public melonport = 0x0; // All deposited ETH will be instantly forwarded to this address.
@@ -24,8 +25,9 @@ contract Contribution_test is SafeMath {
     address public signer = 0x0; // signer address see function() {} for comments
     uint public startBlock; // contribution start block (set in constructor)
     uint public endBlock; // contribution end block (set in constructor)
-    MelonToken public melonToken;
-    PolkaDotToken public polkaDotToken;
+    // FOR TESTING PURPOSES ONLY:
+    MelonToken_test public melonToken;
+    PolkaDotToken_test public polkaDotToken;
 
     // Fields that can be changed by functions
     uint public presaleEtherRaised = 0; // this will keep track of the Ether raised during the contribution
@@ -85,13 +87,10 @@ contract Contribution_test is SafeMath {
 
     // FUNCTIONAL METHODS
 
-    /// Pre: startBlock, endBlock specified in constructor
-    /// Post: Contribution_test price in m{MLN+PDT}/ETH, where 1 MLN == 1000 mMLN, 1 PDT == 1000 mPDT
-    function price(bool wantLiquidity) constant returns(uint)
+    /// Pre: startBlock, endBlock specified in constructor,
+    /// Post: Contribution_test liquid price in m{MLN+PDT}/ETH, where 1 MLN == 1000 mMLN, 1 PDT == 1000 mPDT
+    function price() constant returns(uint)
     {
-        // One illiquid tier
-        if (wantLiquidity == false && block.number>=startBlock && block.number < endBlock)
-            return 1125;
         // Four liquid tiers
         if (block.number>=startBlock && block.number < startBlock + 2*BLKS_PER_WEEK)
             return 1075;
@@ -106,13 +105,10 @@ contract Contribution_test is SafeMath {
     }
 
     // FOR TESTING PURPOSES ONLY:
-    /// Pre: Price for a given blockNumber (!= block.number)
-    /// Post: Externally defined blockNumber
-    function testPrice(bool wantLiquidity) constant returns(uint)
+    /// Pre: Liquid price for a given blockNumber (!= block.number)
+    /// Post: Liquid price for externally defined blockNumber
+    function testPrice() constant returns(uint)
     {
-        // One illiquid tier
-        if (wantLiquidity == false && blockNumber>=startBlock && blockNumber < endBlock)
-            return 1125;
         // Four liquid tiers
         if (blockNumber>=startBlock && blockNumber < startBlock + 2*BLKS_PER_WEEK)
             return 1075;
@@ -137,8 +133,8 @@ contract Contribution_test is SafeMath {
         startBlock = startBlockInput;
         endBlock = startBlockInput + 8*BLKS_PER_WEEK;
         // Create Token Contracts
-        melonToken = new MelonToken(this, startBlock, endBlock);
-        polkaDotToken = new PolkaDotToken(this, startBlock, endBlock);
+        melonToken = new MelonToken_test(this, startBlock, endBlock);
+        polkaDotToken = new PolkaDotToken_test(this, startBlock, endBlock);
     }
 
     /// Pre: Melonport even before contribution period
@@ -173,7 +169,7 @@ contract Contribution_test is SafeMath {
         ether_cap_not_reached()
     {
         // FOR TESTING PURPOSES ONLY: testPrice() instead of price()
-        uint tokens = safeMul(msg.value / UNIT, testPrice(true));
+        uint tokens = safeMul(msg.value / UNIT, testPrice());
         melonToken.mintLiquidToken(recipient, tokens / 3);
         polkaDotToken.mintLiquidToken(recipient, 2 * tokens / 3);
         presaleEtherRaised = safeAdd(presaleEtherRaised, msg.value);
@@ -196,8 +192,7 @@ contract Contribution_test is SafeMath {
         msg_value_well_formed()
         ether_cap_not_reached()
     {
-        // FOR TESTING PURPOSES ONLY: testPrice() instead of price()
-        uint tokens = safeMul(msg.value / UNIT, testPrice(false));
+        uint tokens = safeMul(msg.value / UNIT, ILLIQUID_PRICE);
         melonToken.mintIlliquidToken(recipient, tokens / 3);
         polkaDotToken.mintIlliquidToken(recipient, 2 * tokens / 3);
         presaleEtherRaised = safeAdd(presaleEtherRaised, msg.value);
@@ -217,6 +212,8 @@ contract Contribution_test is SafeMath {
     uint public blockNumber = 0;
     function setBlockNumber(uint blockNumberInput) {
         blockNumber = blockNumberInput;
+        melonToken.setBlockNumber(blockNumber);
+        polkaDotToken.setBlockNumber(blockNumber);
     }
 
 }

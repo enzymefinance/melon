@@ -4,13 +4,9 @@ var BigNumber = require('bignumber.js');
 var sha256 = require('js-sha256').sha256;
 
 //Config
-const EARLY_BIRD = 250;
 const BLKS_PER_WEEK = 41710;
-
-const startBlock = 2377200; //11-01-2016 midnight UTC assuming 14 second blocks
-const timePeriod = 6*BLKS_PER_WEEK;
-const endBlock = startBlock + timePeriod; //11-29-2016 midnight UTC assuming 14 second blocks
-
+const startBlock = 2543719; //11-01-2016 midnight UTC assuming 14.5 second blocks
+const endBlock = startBlock + 8*BLKS_PER_WEEK;
 
 function sign(web3, address, value, callback) {
   web3.eth.sign(address, value, (err, sig) => {
@@ -41,14 +37,15 @@ contract('Contribution', (accounts) => {
   //globals
   let contract;
   let melon_contract;
-  let private_contract;
+  let polkaDot_contract;
   let contractAddress;
   var accounts;
   let testCases;
   const ETHER = new BigNumber(Math.pow(10,18));
   const UNIT = 1000;
-  const founder = accounts[0];
-  const signer = accounts[1];
+  const melonport = accounts[0];
+  const parity = accounts[1];
+  const signer = accounts[2];
   const FOUNDER_LOCKUP = 2252571;
   const TRANSFER_LOCKUP = 370285;
 
@@ -58,18 +55,17 @@ contract('Contribution', (accounts) => {
   });
 
   it('Deploy smart contract', (done) => {
-    Contribution_test.new(founder, signer, startBlock, endBlock).then((result) => {
+    Contribution_test.new(melonport, parity, signer, startBlock).then((result) => {
       contract = result;
       contractAddress = contract.address;
       return contract.melonToken();
     }).then((result) => {
-      melon_contract = MelonToken.at(result);
+      melon_contract = MelonToken_test.at(result);
       return melon_contract.creator()
     }).then((result) => {
-      return contract.privateToken();
+      return contract.polkaDotToken();
     }).then((result) => {
-      // TODO replace with PrivateToken
-      private_contract = MelonToken.at(result);
+      polkaDot_contract = PolkaDotToken_test.at(result);
       done();
     });
   });
@@ -80,13 +76,13 @@ contract('Contribution', (accounts) => {
     for (i = 0; i < numBlocks; i++) {
       const blockNumber = Math.round(startBlock + (endBlock-startBlock)*i/(numBlocks-1));
       let expectedPrice;
-      if (blockNumber>=startBlock && blockNumber<startBlock+EARLY_BIRD) {
-        expectedPrice = 1100;
-      } else if (blockNumber>=startBlock + EARLY_BIRD && blockNumber < startBlock + 2*BLKS_PER_WEEK) {
-        expectedPrice = 1066;
+      if (blockNumber>=startBlock && blockNumber<startBlock + 2*BLKS_PER_WEEK) {
+        expectedPrice = 1075;
       } else if (blockNumber>=startBlock + 2*BLKS_PER_WEEK && blockNumber < startBlock + 4*BLKS_PER_WEEK) {
-        expectedPrice = 1033;
+        expectedPrice = 1050;
       } else if (blockNumber>=startBlock + 4*BLKS_PER_WEEK && blockNumber < startBlock + 6*BLKS_PER_WEEK) {
+        expectedPrice = 1025;
+      } else if (blockNumber>=startBlock + 6*BLKS_PER_WEEK && blockNumber < startBlock + 8*BLKS_PER_WEEK) {
         expectedPrice = 1000;
       } else {
         expectedPrice = 0;
@@ -130,6 +126,7 @@ contract('Contribution', (accounts) => {
         contract.setBlockNumber(testCase.blockNumber).then((result) => {
           return contract.testPrice();
         }).then((result) => {
+          // console.log('result ' + result.toNumber() + ' expected ' + testCase.expectedPrice)
           assert.equal(result.toNumber(), testCase.expectedPrice);
           callbackEach();
         });
@@ -140,26 +137,26 @@ contract('Contribution', (accounts) => {
     );
   });
 
-  it('Test buy', (done) => {
+  it('Test buyLiquid(..)', (done) => {
     var amountToBuy = web3.toWei(4, "ether");
     var amountBought = new BigNumber(0);
     let melonAmountBought = 0;
-    let privateAmountBought = 0;
-    web3.eth.getBalance(founder, (err, result) => {
+    let polkaDotAmountBought = 0;
+    web3.eth.getBalance(melonport, (err, result) => {
       var initialBalance = result;
       async.eachSeries(testCases,
         (testCase, callbackEach) => {
           contract.setBlockNumber(testCase.blockNumber, {from: testCase.account, value: 0}).then((result) => {
-            return contract.buy(testCase.v, testCase.r, testCase.s, {from: testCase.account, value: amountToBuy});
+            return contract.buyLiquid(testCase.v, testCase.r, testCase.s, {from: testCase.account, value: amountToBuy});
           }).then((result) => {
             amountBought = amountBought.plus(new BigNumber(amountToBuy));
             return melon_contract.balanceOf(testCase.account);
           }).then((result) => {
             melonAmountBought = result;
-            return private_contract.balanceOf(testCase.account);
+            return polkaDot_contract.balanceOf(testCase.account);
           }).then((result) => {
-            privateAmountBought = result;
-            tokenAmountBought = melonAmountBought.toNumber() + privateAmountBought.toNumber();
+            polkaDotAmountBought = result;
+            tokenAmountBought = melonAmountBought.toNumber() + polkaDotAmountBought.toNumber();
             expectedResult = (new BigNumber(amountToBuy)).dividedBy(new BigNumber(UNIT)).times(new BigNumber(testCase.expectedPrice));
             // console.log(
             //   '\nstartBlock: ' + startBlock +
@@ -171,7 +168,7 @@ contract('Contribution', (accounts) => {
             //   '\ninitalBalance: ' + initialBalance +
             //   '\namountToBuy: ' + amountToBuy +
             //   '\nmelon balance: ' + melonAmountBought +
-            //   '\nprivate balance: ' + privateAmountBought +
+            //   '\npolkaDot balance: ' + polkaDotAmountBought +
             //   '\ntotal amount: ' + tokenAmountBought +
             //   '\nexpectedPrice: ' + testCase.expectedPrice +
             //   '\n---------------- ' +
@@ -182,7 +179,7 @@ contract('Contribution', (accounts) => {
           });
         },
         (err) => {
-          web3.eth.getBalance(founder, (err, result) => {
+          web3.eth.getBalance(melonport, (err, result) => {
             var finalBalance = result;
             assert.equal(finalBalance.minus(initialBalance).toNumber(), amountBought.toNumber());
             done();
@@ -200,10 +197,10 @@ contract('Contribution', (accounts) => {
       return melon_contract.balanceOf(accounts[2]);
     }).then((result) => {
       initialBalance = result;
-      const hash = '0x' + sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = '0x' + sha256(new Buffer(accounts[2].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
-        contract.buyRecipient(accounts[2], sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy}).then((result) => {
-          return contract.price();
+        contract.buyLiquidRecipient(accounts[2], sig.v, sig.r, sig.s, {from: accounts[2], value: amountToBuy}).then((result) => {
+          return contract.testPrice();
         }).then((result) => {
           price = result / UNIT;
           return melon_contract.balanceOf(accounts[2]);
@@ -216,7 +213,7 @@ contract('Contribution', (accounts) => {
           //   '\nprice: ' + price
           // );
           //TODO for both tokens
-          // assert.equal(finalBalance.sub(initialBalance).toNumber(), new BigNumber(amountToBuy).times(price));
+          assert.equal(finalBalance.sub(initialBalance).toNumber(), (new BigNumber(amountToBuy).times(price).dividedBy(3)).toNumber());
           done();
         });
       });
@@ -226,17 +223,17 @@ contract('Contribution', (accounts) => {
   it('Test buying w poorly fromed msg value', (done) => {
     var amountToBuy = 1001;
     var initialBalance;
-    melon_contract.balanceOf(accounts[1]).then((result) => {
+    melon_contract.balanceOf(accounts[2]).then((result) => {
       initialBalance = result;
-      const hash = '0x' + sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = '0x' + sha256(new Buffer(accounts[2].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
-          contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
+          contract.buyLiquid(sig.v, sig.r, sig.s, {from: accounts[2], value: amountToBuy
           }).then((result) => {
             assert.fail();
           }).catch((err) => {
             assert.notEqual(err.name, 'AssertionError');
-            melon_contract.balanceOf(accounts[1]).then((result) => {
+            melon_contract.balanceOf(accounts[2]).then((result) => {
               var finalBalance = result;
               assert.equal(finalBalance.sub(initialBalance).toNumber(), 0);
               done();
@@ -252,19 +249,19 @@ contract('Contribution', (accounts) => {
   it('Test halting, buying, and failing', (done) => {
     var amountToBuy = web3.toWei(1, "ether");
     var initialBalance;
-    melon_contract.balanceOf(accounts[1]).then((result) => {
+    melon_contract.balanceOf(accounts[2]).then((result) => {
       initialBalance = result;
-      return contract.halt({from: founder, value: 0});
+      return contract.halt({from: melonport, value: 0});
     }).then((result) => {
-      const hash = '0x' + sha256(new Buffer(accounts[1].slice(2),'hex'));
+      const hash = '0x' + sha256(new Buffer(accounts[2].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
-          contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
+          contract.buyLiquid(sig.v, sig.r, sig.s, {from: accounts[2], value: amountToBuy
           }).then((result) => {
             assert.fail();
           }).catch((err) => {
             assert.notEqual(err.name, 'AssertionError');
-            melon_contract.balanceOf(accounts[1]).then((result) => {
+            melon_contract.balanceOf(accounts[2]).then((result) => {
               var finalBalance = result;
               assert.equal(finalBalance.sub(initialBalance).toNumber(), 0);
               done();
@@ -277,37 +274,38 @@ contract('Contribution', (accounts) => {
     });
   });
 
-  // it('Test unhalting, buying, and succeeding', (done) => {
-  //   var amountToBuy = web3.toWei(1, "ether");
-  //   var initialBalance;
-  //   melon_contract.balanceOf(accounts[1]).then((result) => {
-  //     initialBalance = result;
-  //     return contract.unhalt({from: founder, value: 0});
-  //   }).then((result) => {
-  //     const hash = '0x' + sha256(new Buffer(accounts[1].slice(2),'hex'));
-  //     sign(web3, signer, hash, (err, sig) => {
-  //       if (!err) {
-  //         contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: amountToBuy
-  //         }).then((result) => {
-  //           return melon_contract.balanceOf(accounts[1]);
-  //         }).then((result) => {
-  //           var finalBalance = result;
-  //           assert.equal(finalBalance.sub(initialBalance).toNumber(), amountToBuy);
-  //           done();
-  //         });
-  //       } else {
-  //         callback(err, undefined);
-  //       }
-  //     });
-  //   });
-  // });
-
-  it('Test buying after the sale ends', (done) => {
-    contract.setBlockNumber(endBlock+1, {from: accounts[0], value: 0}).then((result) => {
-      const hash = '0x' + sha256(new Buffer(accounts[1].slice(2),'hex'));
+  it('Test unhalting, buying, and succeeding', (done) => {
+    var amountToBuy = web3.toWei(1, "ether");
+    var initialBalance;
+    melon_contract.balanceOf(accounts[2]).then((result) => {
+      initialBalance = result;
+      return contract.unhalt({from: melonport, value: 0});
+    }).then((result) => {
+      const hash = '0x' + sha256(new Buffer(accounts[2].slice(2),'hex'));
       sign(web3, signer, hash, (err, sig) => {
         if (!err) {
-          contract.buy(sig.v, sig.r, sig.s, {from: accounts[1], value: web3.toWei(1, "ether")
+          contract.buyLiquid(sig.v, sig.r, sig.s, {from: accounts[2], value: amountToBuy
+          }).then((result) => {
+            return melon_contract.balanceOf(accounts[2]);
+          }).then((result) => {
+            var finalBalance = result;
+            //TODO for both tokens
+            assert.equal(finalBalance.sub(initialBalance).toNumber(), amountToBuy / 3);
+            done();
+          });
+        } else {
+          callback(err, undefined);
+        }
+      });
+    });
+  });
+
+  it('Test buying after the sale ends', (done) => {
+    contract.setBlockNumber(endBlock + 1, {from: accounts[0], value: 0}).then((result) => {
+      const hash = '0x' + sha256(new Buffer(accounts[2].slice(2),'hex'));
+      sign(web3, signer, hash, (err, sig) => {
+        if (!err) {
+          contract.buyLiquid(sig.v, sig.r, sig.s, {from: accounts[2], value: web3.toWei(1, "ether")
           }).then((result) => {
             assert.fail();
           }).catch((err) => {
@@ -328,49 +326,36 @@ contract('Contribution', (accounts) => {
     });
   });
 
-  // it('Test melonport allocation', (done) => {
-  //   var expectedChange;
-  //   var blockNumber;
-  //   var initialFounderBalance;
-  //   var finalFounderBalance;
-  //   contract.totalSupply().then((result) => {
-  //     var totalSupply = result;
-  //     expectedChange = new BigNumber(totalSupply).div(10);
-  //     blockNumber = endBlock + 1;
-  //     return contract.balanceOf(founder);
-  //   }).then((result) => {
-  //     initialFounderBalance = result;
-  //     return contract.setBlockNumber(blockNumber, {from: founder, value: 0});
-  //   }).then((result) => {
-  //     return contract.allocateFoundationTokens({from: founder, value: 0});
-  //   }).then((result) => {
-  //     return contract.balanceOf(founder);
-  //   }).then((result) => {
-  //     finalFounderBalance = result;
-  //     // console.log(
-  //     //   '\nfinalFounderBalance: ' + finalFounderBalance +
-  //     //   '\ninitalFounderBalance: ' + initialFounderBalance +
-  //     //   '\nexpectedChange: ' + expectedChange
-  //     // );
-  //     assert.equal(finalFounderBalance.minus(initialFounderBalance).toNumber(), new BigNumber(expectedChange));
-  //     done();
-  //   });
-  // });
-  //
-  // it('Test melonport allocation twice', (done) => {
-  //   contract.allocateFoundationTokens({from: founder, value: 0
-  //   }).then((result) => {
-  //     assert.fail();
-  //   }).catch((err) => {
-  //     assert.notEqual(err.name, 'AssertionError');
-  //     done();
-  //   });
-  // });
+  it('Test companies allocation', (done) => {
+    var expectedChange;
+    var blockNumber;
+    var initialMelonportBalance;
+    var finalMelonportBalance;
+    contract.ETHER_CAP().then((result) => {
+      expectedChange = new BigNumber(result).div(300).mul(12);
+      blockNumber = startBlock + 1;
+      return melon_contract.lockedBalanceOf(melonport);
+    }).then((result) => {
+      initialMelonportBalance = result;
+      return contract.setBlockNumber(blockNumber, {from: melonport, value: 0});
+    }).then((result) => {
+      return contract.allocateCompanyTokens({from: melonport, value: 0});
+    }).then((result) => {
+      return melon_contract.lockedBalanceOf(melonport);
+    }).then((result) => {
+      finalMelonportBalance = result;
+      // console.log(
+      //   '\nfinalMelonportBalance: ' + finalMelonportBalance +
+      //   '\ninitalMelonportBalance: ' + initialMelonportBalance +
+      //   '\nexpectedChange: ' + expectedChange
+      // );
+      assert.equal(finalMelonportBalance.minus(initialMelonportBalance).toNumber(), new BigNumber(expectedChange));
+      done();
+    });
+  });
 
-  it('Test founder token allocation too early', (done) => {
-    var blockNumber = endBlock + FOUNDER_LOCKUP;
-    contract.setBlockNumber(blockNumber, {from: founder, value: 0}).then((result) => {
-      return contract.allocateCompanyTokens({from: founder, value: 0});
+  it('Test companies allocation twice', (done) => {
+    contract.allocateCompanyTokens({from: melonport, value: 0
     }).then((result) => {
       assert.fail();
     }).catch((err) => {
@@ -379,49 +364,9 @@ contract('Contribution', (accounts) => {
     });
   });
 
-  // it('Test founder token allocation on time', (done) => {
-  //   var expectedChange;
-  //   var blockNumber;
-  //   var initialFounderBalance;
-  //   var finalFounderBalance;
-  //   contract.presaleTokenSupply().then((result) => {
-  //     var totalSupply = result;
-  //     expectedChange = new BigNumber(totalSupply).div(20).mul(3);
-  //     blockNumber = endBlock + FOUNDER_LOCKUP + 1;
-  //     return contract.balanceOf(founder);
-  //   }).then((result) => {
-  //     initialFounderBalance = result;
-  //     return contract.setBlockNumber(blockNumber, {from: founder, value: 0});
-  //   }).then((result) => {
-  //     return contract.allocateCompanyTokens({from: founder, value: 0});
-  //   }).then((result) => {
-  //     return contract.balanceOf(founder);
-  //   }).then((result) => {
-  //     var finalFounderBalance = result;
-  //     // console.log(
-  //     //   '\nfinalFounderBalance: ' + finalFounderBalance +
-  //     //   '\ninitalFounderBalance: ' + initialFounderBalance +
-  //     //   '\nexpectedChange: ' + expectedChange
-  //     // );
-  //     assert.equal(finalFounderBalance.minus(initialFounderBalance).toNumber(), new BigNumber(expectedChange));
-  //     done();
-  //   });
-  // });
-  //
-  // it('Test founder token allocation twice', (done) => {
-  //   contract.allocateCompanyTokens({from: founder, value: 0
-  //   }).then((result) => {
-  //     assert.fail();
-  //   }).catch((err) => {
-  //     assert.notEqual(err.name, 'AssertionError');
-  //     done();
-  //   });
-  // });
-
-
   it('Test founder change by hacker', (done) => {
-    var newFounder = accounts[1];
-    var hacker = accounts[1];
+    var newFounder = accounts[4];
+    var hacker = accounts[2];
     contract.changeFounder(newFounder, {from: hacker, value: 0
     }).then((result) => {
       assert.fail();
@@ -432,10 +377,10 @@ contract('Contribution', (accounts) => {
   });
 
   it('Test founder change', (done) => {
-    var newFounder = accounts[1];
-    contract.changeFounder(newFounder, {from: founder, value: 0
+    var newFounder = accounts[4];
+    contract.changeFounder(newFounder, {from: melonport, value: 0
     }).then((result) => {
-      return contract.founder();
+      return contract.melonport();
     }).then((result) => {
       assert.equal(result, newFounder);
       done();
@@ -446,10 +391,10 @@ contract('Contribution', (accounts) => {
     var account3 = accounts[3];
     var account4 = accounts[4];
     var amount = web3.toWei(1, "ether");
-    var blockNumber = endBlock + 100;
-    contract.setBlockNumber(blockNumber, {from: founder, value: 0
+    var blockNumber = endBlock;
+    contract.setBlockNumber(blockNumber, {from: melonport, value: 0
     }).then((result) => {
-      return contract.transfer(account3, amount, {from: account4, value: 0});
+      return melon_contract.transfer(account3, amount, {from: account4, value: 0});
     }).then((result) => {
       assert.fail();
     }).catch((err) => {
@@ -458,31 +403,58 @@ contract('Contribution', (accounts) => {
     });
   });
 
-  // it('Test transfer after restricted period', (done) => {
-  //   var account3 = accounts[3];
-  //   var account4 = accounts[4];
-  //   var blockNumber = Math.round(endBlock + TRANSFER_LOCKUP + 1);
-  //   var initalBalance3;
-  //   var initalBalance4;
-  //   var transferAmount = web3.toWei(1, "ether");
-  //   contract.setBlockNumber(blockNumber, {from: founder, value: 0
-  //   }).then((result) => {
-  //     return contract.balanceOf(account3);
-  //   }).then((result) => {
-  //     initalBalance3 = result;
-  //     return contract.balanceOf(account4);
-  //   }).then((result) => {
-  //     initalBalance4 = result;
-  //     return contract.transfer(account3, transferAmount, {from: account4, value: 0});
-  //   }).then((result) => {
-  //     return contract.balanceOf(account3);
-  //   }).then((result) => {
-  //     assert.equal(result.toNumber(), initalBalance3.plus(transferAmount).toNumber());
-  //     return contract.balanceOf(account4);
-  //   }).then((result) => {
-  //     assert.equal(result.toNumber(), initalBalance4.minus(transferAmount).toNumber());
-  //     done();
-  //   });
-  // });
+  it('Test melon transfer after restricted period', (done) => {
+    var account3 = accounts[3];
+    var account4 = accounts[4];
+    var blockNumber = Math.round(endBlock + TRANSFER_LOCKUP + 1);
+    var initalBalance3;
+    var initalBalance4;
+    var transferAmount = web3.toWei(1, "ether");
+    contract.setBlockNumber(blockNumber, {from: melonport, value: 0
+    }).then((result) => {
+      return melon_contract.balanceOf(account3);
+    }).then((result) => {
+      initalBalance3 = result;
+      return melon_contract.balanceOf(account4);
+    }).then((result) => {
+      initalBalance4 = result;
+      return melon_contract.transfer(account3, transferAmount, {from: account4, value: 0});
+    }).then((result) => {
+      return melon_contract.balanceOf(account3);
+    }).then((result) => {
+      assert.equal(result.toNumber(), initalBalance3.plus(transferAmount).toNumber());
+      return melon_contract.balanceOf(account4);
+    }).then((result) => {
+      assert.equal(result.toNumber(), initalBalance4.minus(transferAmount).toNumber());
+      done();
+    });
+  });
+
+  it('Test polkaDot transfer after restricted period', (done) => {
+    var account3 = accounts[3];
+    var account4 = accounts[4];
+    var blockNumber = Math.round(endBlock + TRANSFER_LOCKUP + 1);
+    var initalBalance3;
+    var initalBalance4;
+    var transferAmount = web3.toWei(1, "ether");
+    contract.setBlockNumber(blockNumber, {from: melonport, value: 0
+    }).then((result) => {
+      return polkaDot_contract.balanceOf(account3);
+    }).then((result) => {
+      initalBalance3 = result;
+      return polkaDot_contract.balanceOf(account4);
+    }).then((result) => {
+      initalBalance4 = result;
+      return polkaDot_contract.transfer(account3, transferAmount, {from: account4, value: 0});
+    }).then((result) => {
+      return polkaDot_contract.balanceOf(account3);
+    }).then((result) => {
+      assert.equal(result.toNumber(), initalBalance3.plus(transferAmount).toNumber());
+      return polkaDot_contract.balanceOf(account4);
+    }).then((result) => {
+      assert.equal(result.toNumber(), initalBalance4.minus(transferAmount).toNumber());
+      done();
+    });
+  });
 
 });

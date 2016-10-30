@@ -5,7 +5,7 @@ import "../dependencies/ERC20.sol";
 
 /// @title Melon Token Contract
 /// @author Melonport AG <team@melonport.com>
-contract MelonToken is ERC20, SafeMath {
+contract MelonToken_test is ERC20, SafeMath {
 
     // FILEDS
 
@@ -29,17 +29,22 @@ contract MelonToken is ERC20, SafeMath {
         _;
     }
 
+    // FOR TESTING PURPOSES ONLY: blockNumber instead of block.number
     modifier block_number_past(uint x) {
-        if (!(x < block.number)) throw;
+        if (!(x < blockNumber)) throw;
         _;
     }
 
     // METHODS
 
-    function MelonToken(address createdBy, uint startBlockInput, uint endBlockInput) {
+    function MelonToken_test(address createdBy, uint startBlockInput, uint endBlockInput) {
         creator = createdBy;
         startBlock = startBlockInput;
         endBlock = endBlockInput;
+    }
+
+    function lockedBalanceOf(address _owner) constant returns (uint256 balance) {
+        return lockedBalances[_owner];
     }
 
     // Pre: Address of Contribution contract (creator) is known
@@ -80,6 +85,14 @@ contract MelonToken is ERC20, SafeMath {
         returns (bool success)
     {
         return super.transferFrom(_from, _to, _value);
+    }
+
+    // FOR TESTING PURPOSES ONLY:
+    /// Pre: Assuming parts of code used where block.number is replaced (testcase) w blockNumber
+    /// Post: Sets blockNumber for testing
+    uint public blockNumber = 0;
+    function setBlockNumber(uint blockNumberInput) {
+        blockNumber = blockNumberInput;
     }
 
 }
