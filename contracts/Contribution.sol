@@ -16,7 +16,7 @@ contract Contribution is SafeMath {
     // Constant fields
     uint public constant ETHER_CAP = 1800000 ether; // max amount raised during contribution
     uint public constant ETHER_CAP_LIQUID = ETHER_CAP / 100 * 60; // liquid means tradeable
-    uint public constant ETHER_CAP_ICED = ETHER_CAP / 100 * 40; // iced means untradeable till genesis blk
+    uint public constant ETHER_CAP_ICED = ETHER_CAP / 100 * 40; // iced means untradeable untill geneis blk or two years
     uint constant UNIT = 10**3; // MILLI [m], used to avoid decimal numbers
     uint constant ICED_PRICE = 1125; // One iced tier, remains constant for the duration of the contribution
 
