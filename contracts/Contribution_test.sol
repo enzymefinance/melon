@@ -46,27 +46,27 @@ contract Contribution_test is SafeMath {
         _;
     }
 
-    modifier only_melonport() {
+    modifier only_melonport {
         if (msg.sender != melonport) throw;
         _;
     }
 
-    modifier is_not_halted() {
+    modifier is_not_halted {
         if (halted) throw;
         _;
     }
 
-    modifier ether_cap_not_reached() {
+    modifier ether_cap_not_reached {
         if (safeAdd(presaleEtherRaised, msg.value) > ETHER_CAP) throw;
         _;
     }
 
-    modifier msg_value_well_formed() {
+    modifier msg_value_well_formed {
         if (msg.value < UNIT || msg.value % UNIT != 0) throw;
         _;
     }
 
-    modifier when_company_not_allocated() {
+    modifier when_company_not_allocated {
         if (companyAllocated) throw;
         _;
     }
@@ -158,17 +158,12 @@ contract Contribution_test is SafeMath {
     /// Pre: Buy entry point, msg.value non-zero multiplier of UNIT wei, where 1 wei = 10 ** (-18) ether
     ///  All contribution depositors must have read and accpeted the legal agreement on https://contribution.melonport.com.
     ///  By doing so they receive the signature sig.v, sig.r and sig.s needed to contribute.
-    /// Post: Bought MLN and PDT tokens accoriding to price() and msg.value
-    function buy(bool wantLiquidity, uint8 v, bytes32 r, bytes32 s)
-        payable
-    {
-        buyRecipient(wantLiquidity, msg.sender, v, r, s);
-    }
+    /// Post: Bought MLN and PDT tokens accoriding to price() and msg.value of LIQUID tranche
+    function buyLiquid(uint8 v, bytes32 r, bytes32 s) payable { buyLiquidRecipient(msg.sender, v, r, s); }
 
-    /// Pre: Buy on behalf of a recipient, msg.value non-zero multiplier of 1000 WEI
-    ///  All contribution depositors must have read and accpeted the legal agreement on https://contribution.melonport.com.
-    /// Post: Bought MLN and PDT tokens on behalf of recipient accoriding to price() and msg.value
-    function buyRecipient(bool wantLiquidity, address recipient, uint8 v, bytes32 r, bytes32 s)
+    /// Pre: Generated signature (see Pre: text of buyLiquid()) for a specific address
+    /// Post: Bought MLN and PDT tokens on behalf of recipient accoriding to price() and msg.value of LIQUID tranche
+    function buyLiquidRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer(v, r, s)
         block_number_at_least(startBlock)
@@ -178,16 +173,33 @@ contract Contribution_test is SafeMath {
         ether_cap_not_reached()
     {
         // FOR TESTING PURPOSES ONLY: testPrice() instead of price()
-        uint tokens = safeMul(msg.value / UNIT, testPrice(wantLiquidity));
-        if (wantLiquidity == true) {
-            //TODO: check if functions execute
-            melonToken.mintLiquidToken(recipient, tokens / 3);
-            polkaDotToken.mintLiquidToken(recipient, 2 * tokens / 3);
-        } else {
-            //TODO: check if functions execute
-            melonToken.mintIlliquidToken(recipient, tokens / 3);
-            polkaDotToken.mintIlliquidToken(recipient, 2 * tokens / 3);
-        }
+        uint tokens = safeMul(msg.value / UNIT, testPrice(true));
+        melonToken.mintLiquidToken(recipient, tokens / 3);
+        polkaDotToken.mintLiquidToken(recipient, 2 * tokens / 3);
+        presaleEtherRaised = safeAdd(presaleEtherRaised, msg.value);
+        if(!melonport.send(msg.value)) throw;
+        Buy(recipient, msg.value, tokens);
+    }
+
+    /// Pre: Generated signature (see Pre: text of buyLiquid())
+    /// Post: Bought MLN and DPT tokens accoriding to price() and msg.value of ILLIQUID tranche
+    function buyIlliquid(uint8 v, bytes32 r, bytes32 s) payable { buyIlliquidRecipient(msg.sender, v, r, s); }
+
+    /// Pre: Generated signature (see Pre: text of buyLiquid()) for a specific address
+    /// Post: Bought MLN and PDT tokens on behalf of recipient accoriding to price() and msg.value of ILLIQUID tranche
+    function buyIlliquidRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
+        payable
+        is_signer(v, r, s)
+        block_number_at_least(startBlock)
+        block_number_at_most(endBlock)
+        is_not_halted()
+        msg_value_well_formed()
+        ether_cap_not_reached()
+    {
+        // FOR TESTING PURPOSES ONLY: testPrice() instead of price()
+        uint tokens = safeMul(msg.value / UNIT, testPrice(false));
+        melonToken.mintIlliquidToken(recipient, tokens / 3);
+        polkaDotToken.mintIlliquidToken(recipient, 2 * tokens / 3);
         presaleEtherRaised = safeAdd(presaleEtherRaised, msg.value);
         if(!melonport.send(msg.value)) throw;
         Buy(recipient, msg.value, tokens);

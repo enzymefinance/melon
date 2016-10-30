@@ -9,9 +9,9 @@ contract PolkaDotToken is MelonToken {
     // FILEDS
 
     // Constant token specific fields
-    string public constant NAME = "PolkaDotToken";
-    string public constant SYMBOL = "DOT";
-    uint public constant DECIMALS = 18;
+    string public constant name = "PolkaDotToken";
+    string public constant symbol = "PDT";
+    uint8 public constant decimals = 18;
 
     // METHODS
 

@@ -10,9 +10,9 @@ contract MelonToken is ERC20, SafeMath {
     // FILEDS
 
     // Constant token specific fields
-    string public constant NAME = "Melon Token";
-    string public constant SYMBOL = "MLN";
-    uint public constant DECIMALS = 18;
+    string public constant name = "Melon Token";
+    string public constant symbol = "MLN";
+    uint8 public constant decimals = 18;
 
     // Fields that are only changed in constructor
     address public creator;
@@ -24,7 +24,7 @@ contract MelonToken is ERC20, SafeMath {
 
     // MODIFIERS
 
-    modifier only_creator() {
+    modifier only_creator {
         if (msg.sender != creator) throw;
         _;
     }
