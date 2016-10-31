@@ -79,7 +79,7 @@ contract MelonToken is ERC20, SafeMath {
         totalSupply = safeAdd(totalSupply, tokens);
     }
 
-    // Pre: Thawing period has passed - ice has turned into water.
+    // Pre: Thawing period has passed - iced funds have turned into liquid ones
     // Post: All funds available for trade
     function unlockBalance(address _who)
         block_timestamp_past(endTime + 2 years)

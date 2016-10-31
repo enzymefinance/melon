@@ -17,8 +17,8 @@ contract Contribution is SafeMath {
     uint public constant ETHER_CAP = 1800000 ether; // max amount raised during contribution
     uint public constant ETHER_CAP_LIQUID = ETHER_CAP / 100 * 60; // liquid means tradeable
     uint public constant ETHER_CAP_ICED = ETHER_CAP / 100 * 40; // iced means untradeable untill geneis blk or two years
-    uint constant UNIT = 10**3; // MILLI [m], used to avoid decimal numbers
     uint constant ICED_PRICE = 1125; // One iced tier, remains constant for the duration of the contribution
+    uint constant UNIT = 10**3; // MILLI [m], price is divided by this unit, used to avoid decimal numbers
 
     // Fields that are only changed in constructor
     address public melonport = 0x0; // All deposited ETH will be instantly forwarded to this address.
@@ -119,9 +119,9 @@ contract Contribution is SafeMath {
         endTime = startTimeInput + 8 weeks;
         // Initialise & Setup Token Contracts
         melonToken = MelonToken(melonTokenInput);
-        melonToken.setup(this, startTime, endTime);
+        melonToken.setup(this, startTime);
         polkaDotToken = PolkaDotToken(polkaDotInput);
-        polkaDotToken.setup(this, startTime, endTime);
+        polkaDotToken.setup(this, startTime);
     }
 
     /// Pre: Melonport even before contribution period

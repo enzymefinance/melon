@@ -9,7 +9,7 @@
     "async": "^2.0.1",
     "bignumber.js": "^2.4.0",
     "js-sha256": "^0.3.2",
-    "ethereumjs-testrpc": "2.2.7",
+    "ethereumjs-testrpc": "3.0.0",
     "truffle": "3.0.0-2"
   }
 }
