@@ -21,9 +21,10 @@ contract Contribution is SafeMath {
     uint constant UNIT = 10**3; // MILLI [m], price is divided by this unit, used to avoid decimal numbers
 
     // Fields that are only changed in constructor
-    address public melonport = 0x0; // All deposited ETH will be instantly forwarded to this address.
-    address public parity = 0x0; // Token allocation for company
-    address public signer = 0x0; // signer address see function() {} for comments
+    address public melonport; // All deposited ETH will be instantly forwarded to this address.
+    address public parity; // Token allocation for company
+    address public btcs; // Bitcoin Suisse allocation option
+    address public signer; // signer address see function() {} for comments
     uint public startTime; // contribution start block (set in constructor)
     uint public endTime; // contribution end block (set in constructor)
     MelonToken public melonToken; // Contract of the ERC20 compliant MLNs
@@ -53,8 +54,18 @@ contract Contribution is SafeMath {
         _;
     }
 
+    modifier only_btcs {
+        if (msg.sender != btcs) throw;
+        _;
+    }
+
     modifier is_not_halted {
         if (halted) throw;
+        _;
+    }
+
+    modifier btcs_ether_cap_not_reached {
+        if (safeAdd(etherRaisedIced, msg.value) > ETHER_CAP / 100 * 25) throw;
         _;
     }
 
@@ -111,9 +122,10 @@ contract Contribution is SafeMath {
 
     /// Pre: ALL fields, except { melonport, signer, startTime, endTime } are valid
     /// Post: All fields, including { melonport, signer, startTime, endTime } are valid
-    function Contribution(address melonportInput, address parityInput, address melonTokenInput, address polkaDotInput, address signerInput, uint startTimeInput) {
+    function Contribution(address melonportInput, address parityInput, address btcsInput, address signerInput, address melonTokenInput, address polkaDotInput, uint startTimeInput) {
         melonport = melonportInput;
         parity = parityInput;
+        btcs = btcsInput;
         signer = signerInput;
         startTime = startTimeInput;
         endTime = startTimeInput + 8 weeks;
@@ -136,6 +148,26 @@ contract Contribution is SafeMath {
         polkaDotToken.mintIcedToken(parity, 2 * ETHER_CAP * 1425 / 30000); // 14.25 percent for parity
         companyAllocated = true;
         AllocateCompanyTokens(msg.sender);
+    }
+
+    /// Pre: Before Contribution start, BTCS has exclusiv right to buy up to 25% of all tokens
+    ///  msg.value non-zero multiplier of UNIT wei, where 1 wei = 10 ** (-18) ether
+    /// Post: Bought MLN and DPT tokens accoriding to ICED_PRICE and msg.value of ICED tranche
+    function btcsBuyIced()
+        payable
+        only_btcs
+        block_timestamp_at_most(startTime)
+        is_not_halted
+        msg_value_well_formed
+        btcs_ether_cap_not_reached
+    {
+        address recipient = msg.sender;
+        uint tokens = safeMul(msg.value / UNIT, ICED_PRICE);
+        melonToken.mintIcedToken(recipient, tokens / 3);
+        polkaDotToken.mintIcedToken(recipient, 2 * tokens / 3);
+        etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
+        if(!melonport.send(msg.value)) throw;
+        Buy(recipient, msg.value, tokens);
     }
 
     /// Pre: Buy entry point, msg.value non-zero multiplier of UNIT wei, where 1 wei = 10 ** (-18) ether
@@ -164,11 +196,11 @@ contract Contribution is SafeMath {
     }
 
     /// Pre: Generated signature (see Pre: text of buyLiquid())
-    /// Post: Bought MLN and DPT tokens accoriding to price() and msg.value of ICED tranche
+    /// Post: Bought MLN and DPT tokens accoriding to ICED_PRICE and msg.value of ICED tranche
     function buyIced(uint8 v, bytes32 r, bytes32 s) payable { buyIcedRecipient(msg.sender, v, r, s); }
 
     /// Pre: Generated signature (see Pre: text of buyLiquid()) for a specific address
-    /// Post: Bought MLN and PDT tokens on behalf of recipient accoriding to price() and msg.value of ICED tranche
+    /// Post: Bought MLN and PDT tokens on behalf of recipient accoriding to ICED_PRICE and msg.value of ICED tranche
     function buyIcedRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer(v, r, s)
