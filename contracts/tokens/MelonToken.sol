@@ -15,7 +15,7 @@ contract MelonToken is ERC20, SafeMath {
     uint8 public constant decimals = 18;
 
     // Fields that are only changed in constructor
-    address public creator = 0x0; // Contribution contract
+    address public creator; // Contribution contract
     uint public startTime; // contribution start block (set in constructor)
     uint public endTime; // contribution end block (set in constructor)
 

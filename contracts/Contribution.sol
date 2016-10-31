@@ -16,7 +16,7 @@ contract Contribution is SafeMath {
     // Constant fields
     uint public constant ETHER_CAP = 1800000 ether; // max amount raised during contribution
     uint public constant ETHER_CAP_LIQUID = ETHER_CAP / 100 * 60; // liquid means tradeable
-    uint public constant ETHER_CAP_ICED = ETHER_CAP / 100 * 40; // iced means untradeable untill geneis blk or two years
+    uint public constant ETHER_CAP_ICED = ETHER_CAP / 100 * 40; // iced means untradeable untill genesis blk or two years
     uint constant ICED_PRICE = 1125; // One iced tier, remains constant for the duration of the contribution
     uint constant UNIT = 10**3; // MILLI [m], price is divided by this unit, used to avoid decimal numbers
 
@@ -120,8 +120,8 @@ contract Contribution is SafeMath {
 
     // NON-CONDITIONAL IMPERATIVAL METHODS
 
-    /// Pre: ALL fields, except { melonport, signer, startTime, endTime } are valid
-    /// Post: All fields, including { melonport, signer, startTime, endTime } are valid
+    /// Pre: ALL fields, except { melonport, parity, btcs, signer, melonToken, polkaDotToken, startTime } are valid
+    /// Post: All fields, including { melonport, parity, btcs, signer, melonToken, polkaDotToken, startTime } are valid
     function Contribution(address melonportInput, address parityInput, address btcsInput, address signerInput, address melonTokenInput, address polkaDotInput, uint startTimeInput) {
         melonport = melonportInput;
         parity = parityInput;
@@ -150,7 +150,7 @@ contract Contribution is SafeMath {
         AllocateCompanyTokens(msg.sender);
     }
 
-    /// Pre: Before Contribution start, BTCS has exclusiv right to buy up to 25% of all tokens
+    /// Pre: BTCS even before contribution period, BTCS has exclusiv right to buy up to 25% of all tokens
     ///  msg.value non-zero multiplier of UNIT wei, where 1 wei = 10 ** (-18) ether
     /// Post: Bought MLN and DPT tokens accoriding to ICED_PRICE and msg.value of ICED tranche
     function btcsBuyIced()
