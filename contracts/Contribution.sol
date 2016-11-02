@@ -152,7 +152,7 @@ contract Contribution is SafeMath {
 
     /// Pre: BTCS even before contribution period, BTCS has exclusiv right to buy up to 25% of all tokens
     ///  msg.value non-zero multiplier of UNIT wei, where 1 wei = 10 ** (-18) ether
-    /// Post: Bought MLN and DPT tokens accoriding to ICED_PRICE and msg.value of ICED tranche
+    /// Post: BTCS bought MLN and DPT tokens accoriding to ICED_PRICE and msg.value of ICED tranche
     function btcsBuyIced()
         payable
         only_btcs
@@ -161,13 +161,12 @@ contract Contribution is SafeMath {
         msg_value_well_formed
         btcs_ether_cap_not_reached
     {
-        address recipient = msg.sender;
         uint tokens = safeMul(msg.value / UNIT, ICED_PRICE);
-        melonToken.mintIcedToken(recipient, tokens / 3);
-        polkaDotToken.mintIcedToken(recipient, 2 * tokens / 3);
+        melonToken.mintIcedToken(btcs, tokens / 3);
+        polkaDotToken.mintIcedToken(btcs, 2 * tokens / 3);
         etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
         if(!melonport.send(msg.value)) throw;
-        Buy(recipient, msg.value, tokens);
+        Buy(btcs, msg.value, tokens);
     }
 
     /// Pre: Buy entry point, msg.value non-zero multiplier of UNIT wei, where 1 wei = 10 ** (-18) ether
