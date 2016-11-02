@@ -12,7 +12,7 @@ contract MelonToken is ERC20, SafeMath {
     // Constant token specific fields
     string public constant name = "Melon Token";
     string public constant symbol = "MLN";
-    uint8 public constant decimals = 18;
+    uint public constant decimals = 18;
 
     // Fields that are only changed in constructor
     address public creator; // Contribution contract
