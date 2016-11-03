@@ -1,4 +1,4 @@
-pragma solidity ^0.4.2;
+pragma solidity ^0.4.4;
 
 /// @title Overflow aware uint math functions.
 /// @author Melonport AG <team@melonport.com>

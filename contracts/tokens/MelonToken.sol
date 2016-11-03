@@ -1,4 +1,4 @@
-pragma solidity ^0.4.2;
+pragma solidity ^0.4.4;
 
 import "../dependencies/SafeMath.sol";
 import "../dependencies/ERC20.sol";
@@ -20,7 +20,7 @@ contract MelonToken is ERC20, SafeMath {
     uint public endTime; // contribution end block (set in constructor)
 
     // Fields that can be changed by functions
-    bool public isSetup= false; // this will change to true when the company funds are allocated
+    bool public isSetup; // this will change to true when the company funds are allocated
     mapping (address => uint) lockedBalances;
 
     // MODIFIERS
