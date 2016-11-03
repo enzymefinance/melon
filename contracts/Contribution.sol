@@ -43,7 +43,7 @@ contract Contribution is SafeMath {
 
     // MODIFIERS
 
-    modifier is_signer(uint v, bytes32 r, bytes32 s) {
+    modifier is_signer(uint8 v, bytes32 r, bytes32 s) {
         bytes32 hash = sha256(msg.sender);
         if (ecrecover(hash,v,r,s) != signer) throw;
         _;
@@ -173,11 +173,11 @@ contract Contribution is SafeMath {
     ///  All contribution depositors must have read and accpeted the legal agreement on https://contribution.melonport.com.
     ///  By doing so they receive the signature sig.v, sig.r and sig.s needed to contribute.
     /// Post: Bought MLN and PDT tokens accoriding to price() and msg.value of LIQUID tranche
-    function buyLiquid(uint v, bytes32 r, bytes32 s) payable { buyLiquidRecipient(msg.sender, v, r, s); }
+    function buyLiquid(uint8 v, bytes32 r, bytes32 s) payable { buyLiquidRecipient(msg.sender, v, r, s); }
 
     /// Pre: Generated signature (see Pre: text of buyLiquid()) for a specific address
     /// Post: Bought MLN and PDT tokens on behalf of recipient accoriding to price() and msg.value of LIQUID tranche
-    function buyLiquidRecipient(address recipient, uint v, bytes32 r, bytes32 s)
+    function buyLiquidRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer(v, r, s)
         block_timestamp_at_least(startTime)
@@ -196,11 +196,11 @@ contract Contribution is SafeMath {
 
     /// Pre: Generated signature (see Pre: text of buyLiquid())
     /// Post: Bought MLN and DPT tokens accoriding to ICED_PRICE and msg.value of ICED tranche
-    function buyIced(uint v, bytes32 r, bytes32 s) payable { buyIcedRecipient(msg.sender, v, r, s); }
+    function buyIced(uint8 v, bytes32 r, bytes32 s) payable { buyIcedRecipient(msg.sender, v, r, s); }
 
     /// Pre: Generated signature (see Pre: text of buyLiquid()) for a specific address
     /// Post: Bought MLN and PDT tokens on behalf of recipient accoriding to ICED_PRICE and msg.value of ICED tranche
-    function buyIcedRecipient(address recipient, uint v, bytes32 r, bytes32 s)
+    function buyIcedRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer(v, r, s)
         block_timestamp_at_least(startTime)
