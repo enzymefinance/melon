@@ -118,7 +118,7 @@ contract Contribution is SafeMath {
         return 0;
     }
 
-    // NON-CONDITIONAL IMPERATIVAL METHODS
+    // NON-CONSTANT METHODS
 
     /// Pre: ALL fields, except { melonport, parity, btcs, signer, startTime } are valid
     /// Post: All fields, including { melonport, parity, btcs, signer, startTime } are valid
