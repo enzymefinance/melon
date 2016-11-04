@@ -120,9 +120,9 @@ contract Contribution is SafeMath {
 
     // NON-CONDITIONAL IMPERATIVAL METHODS
 
-    /// Pre: ALL fields, except { melonport, parity, btcs, signer, melonToken, polkaDotToken, startTime } are valid
-    /// Post: All fields, including { melonport, parity, btcs, signer, melonToken, polkaDotToken, startTime } are valid
-    function Contribution(address melonportInput, address parityInput, address btcsInput, address signerInput, address melonTokenInput, address polkaDotInput, uint startTimeInput) {
+    /// Pre: ALL fields, except { melonport, parity, btcs, signer, startTime } are valid
+    /// Post: All fields, including { melonport, parity, btcs, signer, startTime } are valid
+    function Contribution(address melonportInput, address parityInput, address btcsInput, address signerInput, uint startTimeInput) {
         melonport = melonportInput;
         parity = parityInput;
         btcs = btcsInput;
@@ -130,10 +130,8 @@ contract Contribution is SafeMath {
         startTime = startTimeInput;
         endTime = startTimeInput + 8 weeks;
         // Initialise & Setup Token Contracts
-        melonToken = MelonToken(melonTokenInput);
-        melonToken.setup(this, startTime);
-        polkaDotToken = PolkaDotToken(polkaDotInput);
-        polkaDotToken.setup(this, startTime);
+        melonToken = new MelonToken(this, startTime);
+        polkaDotToken = new PolkaDotToken(this, startTime);
     }
 
     /// Pre: Melonport even before contribution period

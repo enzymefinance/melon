@@ -20,18 +20,12 @@ contract MelonToken is ERC20, SafeMath {
     uint public endTime; // contribution end block (set in constructor)
 
     // Fields that can be changed by functions
-    bool public isSetup; // this will change to true when the company funds are allocated
     mapping (address => uint) lockedBalances;
 
     // MODIFIERS
 
     modifier only_creator {
         if (msg.sender != creator) throw;
-        _;
-    }
-
-    modifier is_setup {
-        if (!isSetup) throw;
         _;
     }
 
@@ -48,20 +42,16 @@ contract MelonToken is ERC20, SafeMath {
 
     // METHODS
 
-    function MelonToken() {}
-
-    function setup(address createdBy, uint startTimeInput) {
+    function MelonToken(address createdBy, uint startTimeInput) {
         creator = createdBy;
         startTime = startTimeInput;
         endTime = startTime + 8 weeks;
-        isSetup = true;
     }
 
     // Pre: Address of Contribution contract (creator) is known
     // Post: Mints Token into liquid tranche
     function mintLiquidToken(address recipient, uint tokens)
         external
-        is_setup
         only_creator
     {
         balances[recipient] = safeAdd(balances[recipient], tokens);
@@ -72,7 +62,6 @@ contract MelonToken is ERC20, SafeMath {
     // Post: Mints Token into iced tranche. They will become liquid once the Genesis block has been launched
     function mintIcedToken(address recipient, uint tokens)
         external
-        is_setup
         only_creator
     {
         lockedBalances[recipient] = safeAdd(lockedBalances[recipient], tokens);

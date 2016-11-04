@@ -15,9 +15,8 @@ contract PolkaDotToken is MelonToken {
 
     // METHODS
 
-    function PolkaDotToken()
-        //TODO check this is correct
-        MelonToken()
+    function PolkaDotToken(address createdBy, uint startTimeInput)
+        MelonToken(createdBy, startTimeInput)
     {}
 
 }

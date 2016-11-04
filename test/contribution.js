@@ -56,7 +56,7 @@ contract('Contribution', (accounts) => {
   });
 
   it('Deploy smart contract', (done) => {
-    Contribution.new(melonport, parity, btcs, signer, '0x0', '0x0', startTime).then((result) => {
+    Contribution.new(melonport, parity, btcs, signer, startTime).then((result) => {
       contract = result;
       contractAddress = contract.address;
       return contract.melonToken();
@@ -71,55 +71,55 @@ contract('Contribution', (accounts) => {
     });
   });
 
-  // it('Set up test cases', (done) => {
-  //   testCases = [];
-  //   const numBlocks = 8;
-  //   for (i = 0; i < numBlocks; i++) {
-  //     const blockNumber = Math.round(startTime + (endTime-startTime)*i/(numBlocks-1));
-  //     let expectedPrice;
-  //     if (blockNumber>=startTime && blockNumber<startTime + 2*SECONDS_PER_WEEK) {
-  //       expectedPrice = 1075;
-  //     } else if (blockNumber>=startTime + 2*SECONDS_PER_WEEK && blockNumber < startTime + 4*SECONDS_PER_WEEK) {
-  //       expectedPrice = 1050;
-  //     } else if (blockNumber>=startTime + 4*SECONDS_PER_WEEK && blockNumber < startTime + 6*SECONDS_PER_WEEK) {
-  //       expectedPrice = 1025;
-  //     } else if (blockNumber>=startTime + 6*SECONDS_PER_WEEK && blockNumber < startTime + 8*SECONDS_PER_WEEK) {
-  //       expectedPrice = 1000;
-  //     } else {
-  //       expectedPrice = 0;
-  //     }
-  //     const accountNum = Math.max(1,Math.min(i+1, accounts.length-1));
-  //     const account = accounts[accountNum];
-  //     expectedPrice = Math.round(expectedPrice);
-  //     testCases.push(
-  //       {
-  //         accountNum: accountNum,
-  //         blockNumber: blockNumber,
-  //         expectedPrice: expectedPrice,
-  //         account: account,
-  //       }
-  //     );
-  //   }
-  //   done();
-  // });
-  //
-  // it('Should sign test cases', (done) => {
-  //   async.mapSeries(testCases,
-  //     function(testCase, callbackMap) {
-  //       const hash = '0x' + sha256(new Buffer(testCase.account.slice(2),'hex'));
-  //       sign(web3, signer, hash, (err, sig) => {
-  //         testCase.v = sig.v;
-  //         testCase.r = sig.r;
-  //         testCase.s = sig.s;
-  //         callbackMap(null, testCase);
-  //       });
-  //     },
-  //     function(err, newTestCases) {
-  //       testCases = newTestCases;
-  //       done();
-  //     }
-  //   );
-  // });
+  it('Set up test cases', (done) => {
+    testCases = [];
+    const numBlocks = 8;
+    for (i = 0; i < numBlocks; i++) {
+      const blockNumber = Math.round(startTime + (endTime-startTime)*i/(numBlocks-1));
+      let expectedPrice;
+      if (blockNumber>=startTime && blockNumber<startTime + 2*SECONDS_PER_WEEK) {
+        expectedPrice = 1075;
+      } else if (blockNumber>=startTime + 2*SECONDS_PER_WEEK && blockNumber < startTime + 4*SECONDS_PER_WEEK) {
+        expectedPrice = 1050;
+      } else if (blockNumber>=startTime + 4*SECONDS_PER_WEEK && blockNumber < startTime + 6*SECONDS_PER_WEEK) {
+        expectedPrice = 1025;
+      } else if (blockNumber>=startTime + 6*SECONDS_PER_WEEK && blockNumber < startTime + 8*SECONDS_PER_WEEK) {
+        expectedPrice = 1000;
+      } else {
+        expectedPrice = 0;
+      }
+      const accountNum = Math.max(1,Math.min(i+1, accounts.length-1));
+      const account = accounts[accountNum];
+      expectedPrice = Math.round(expectedPrice);
+      testCases.push(
+        {
+          accountNum: accountNum,
+          blockNumber: blockNumber,
+          expectedPrice: expectedPrice,
+          account: account,
+        }
+      );
+    }
+    done();
+  });
+  
+  it('Should sign test cases', (done) => {
+    async.mapSeries(testCases,
+      function(testCase, callbackMap) {
+        const hash = '0x' + sha256(new Buffer(testCase.account.slice(2),'hex'));
+        sign(web3, signer, hash, (err, sig) => {
+          testCase.v = sig.v;
+          testCase.r = sig.r;
+          testCase.s = sig.s;
+          callbackMap(null, testCase);
+        });
+      },
+      function(err, newTestCases) {
+        testCases = newTestCases;
+        done();
+      }
+    );
+  });
   //
   // it('Test price', (done) => {
   //   async.eachSeries(testCases,
