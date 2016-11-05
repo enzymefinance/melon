@@ -29,8 +29,8 @@ contract MelonToken is ERC20, SafeMath {
         _;
     }
 
-    modifier block_timestamp_past(uint x) {
-        if (!(x < now)) throw;
+    modifier now_past(uint x) {
+        if (now <= x) throw;
         _;
     }
 
@@ -68,10 +68,21 @@ contract MelonToken is ERC20, SafeMath {
         totalSupply = safeAdd(totalSupply, tokens);
     }
 
+    // Pre: Address of Contribution contract (creator) is known
+    // Post: Creator transfers all its tokens to _to address, only once possible
+    function transferAllCreatorToken(address recipient)
+        external
+        only_creator
+    {
+        uint tokens = lockedBalances[creator];
+        lockedBalances[recipient] = safeAdd(lockedBalances[recipient], tokens);
+        lockedBalances[creator] = 0;
+    }
+
     // Pre: Thawing period has passed - iced funds have turned into liquid ones
     // Post: All funds available for trade
     function unlockBalance(address _who)
-        block_timestamp_past(endTime + 2 years)
+        now_past(endTime + 2 years)
     {
         balances[_who] = safeAdd(balances[_who], lockedBalances[_who]);
         lockedBalances[_who] = 0;
@@ -81,7 +92,7 @@ contract MelonToken is ERC20, SafeMath {
     /// Post: Transfer MLN from msg.sender
     /// Note: ERC 20 Standard Token interface transfer function
     function transfer(address _to, uint256 _value)
-        block_timestamp_past(endTime)
+        now_past(endTime)
         returns (bool success)
     {
         return super.transfer(_to, _value);
@@ -91,7 +102,7 @@ contract MelonToken is ERC20, SafeMath {
     /// Post: Transfer MLN from arbitrary address
     /// Note: ERC 20 Standard Token interface transferFrom function
     function transferFrom(address _from, address _to, uint256 _value)
-        block_timestamp_past(endTime)
+        now_past(endTime)
         returns (bool success)
     {
         return super.transferFrom(_from, _to, _value);

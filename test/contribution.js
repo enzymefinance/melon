@@ -366,9 +366,9 @@ contract('Contribution', (accounts) => {
   // });
   //
   // it('Test founder change by hacker', (done) => {
-  //   var newFounder = accounts[4];
+  //   var newCreator = accounts[4];
   //   var hacker = accounts[2];
-  //   contract.changeFounder(newFounder, {from: hacker, value: 0
+  //   contract.changeCreator(newCreator, {from: hacker, value: 0
   //   }).then((result) => {
   //     assert.fail();
   //   }).catch((err) => {
@@ -378,12 +378,12 @@ contract('Contribution', (accounts) => {
   // });
   //
   // it('Test founder change', (done) => {
-  //   var newFounder = accounts[4];
-  //   contract.changeFounder(newFounder, {from: melonport, value: 0
+  //   var newCreator = accounts[4];
+  //   contract.changeCreator(newCreator, {from: melonport, value: 0
   //   }).then((result) => {
   //     return contract.melonport();
   //   }).then((result) => {
-  //     assert.equal(result, newFounder);
+  //     assert.equal(result, newCreator);
   //     done();
   //   });
   // });
