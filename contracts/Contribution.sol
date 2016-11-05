@@ -228,7 +228,7 @@ contract Contribution is SafeMath {
 
     /// Pre: Melonport only once, after contribution period
     /// Post: Melonport mints and allocates Melonport Stake
-    function allocateParityStake()
+    function transferParityStake()
         only_melonport
         now_past(endTime)
         melonport_is_allocated
