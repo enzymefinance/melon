@@ -25,7 +25,7 @@ contract Contribution is SafeMath {
     uint public constant DIVISOR_STAKE = 10**4; // stakes are divided by this number
     uint public constant ICED_RATE = 1125; // One iced tier, remains constant for the duration of the contribution
     uint public constant DIVISOR_RATE = 10**3; // price rates are divided by this number
-    uint public constant MAX_CONTRIBUTION_DURATION = 8 weeks;
+    uint public constant MAX_CONTRIBUTION_DURATION = 8 weeks; // max amount in seconds of contribution period
 
     // Fields that are only changed in constructor
     address public melonport; // All deposited ETH will be instantly forwarded to this address.
@@ -40,7 +40,6 @@ contract Contribution is SafeMath {
     // Fields that can be changed by functions
     uint public etherRaisedLiquid; // this will keep track of the Ether raised for the liquid tranche during the contribution
     uint public etherRaisedIced; // this will keep track of the Ether raised for the iced tranche during the contribution
-    uint public totalMintedTokens;
     bool public melonportAllocated; // this will change to true when melonport tokens are minted and allocated
     bool public halted; // the melonport address can set this to true to halt the contribution due to an emergency
 
@@ -166,7 +165,6 @@ contract Contribution is SafeMath {
         uint tokens = safeMul(msg.value, ICED_RATE) / DIVISOR_RATE;
         melonToken.mintIcedToken(recipient, forMelon(tokens));
         dotToken.mintIcedToken(recipient, forDot(tokens));
-        totalMintedTokens = safeAdd(totalMintedTokens, tokens);
         etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
         if(!melonport.send(msg.value)) throw;
         IcedTokenBought(recipient, msg.value, tokens);
@@ -190,7 +188,6 @@ contract Contribution is SafeMath {
         uint tokens = safeMul(msg.value, liquidRate()) / DIVISOR_RATE;
         melonToken.mintLiquidToken(recipient, forMelon(tokens));
         dotToken.mintLiquidToken(recipient, forDot(tokens));
-        totalMintedTokens = safeAdd(totalMintedTokens, tokens);
         etherRaisedLiquid = safeAdd(etherRaisedLiquid, msg.value);
         if(!melonport.send(msg.value)) throw;
         LiquidTokenBought(recipient, msg.value, tokens);
@@ -208,7 +205,6 @@ contract Contribution is SafeMath {
         uint tokens = safeMul(msg.value, ICED_RATE) / DIVISOR_RATE;
         melonToken.mintIcedToken(recipient, forMelon(tokens));
         dotToken.mintIcedToken(recipient, forDot(tokens));
-        totalMintedTokens = safeAdd(totalMintedTokens, tokens);
         etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
         if(!melonport.send(msg.value)) throw;
         IcedTokenBought(recipient, msg.value, tokens);
