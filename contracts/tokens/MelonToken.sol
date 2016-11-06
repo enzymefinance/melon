@@ -69,7 +69,7 @@ contract MelonToken is ERC20, SafeMath {
     }
 
     // Pre: Address of Contribution contract (creator) is known
-    // Post: Creator transfers all its tokens to _to address, only once possible
+    // Post: Creator transfers all its tokens to recipient address, only once possible
     function transferAllCreatorToken(address recipient)
         external
         only_creator

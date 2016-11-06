@@ -114,7 +114,7 @@ contract Contribution is SafeMath {
     // CONSTANT METHODS
 
     /// Pre: startTime, endTime specified in constructor,
-    /// Post: Liquid rate in m{MLN+DOT}/ETH, where 1 MLN == 1000 mMLN, 1 DOT == 1000 mDOT
+    /// Post: Liquid rate, one ether equals a combined total of liquidRate() / DIVISOR_RATE mln and tot tokens
     function liquidRate() constant returns (uint) {
         // Four liquid tiers
         if (startTime <= now && now < startTime + 2 weeks)
@@ -148,12 +148,12 @@ contract Contribution is SafeMath {
         dotToken = new DotToken(this, startTime, endTime); // Create Dot Token Contract
     }
 
-    /// Pre: Generated signature (see Pre: text of buyLiquid())
-    /// Post: Bought MLN and DPT tokens accoriding to ICED_RATE and msg.value of ICED tranche
+    /// Pre: Valid signature received from https://contribution.melonport.com
+    /// Post: Bought mln and dot tokens of iced tranche accoriding to ICED_RATE and msg.value
     function buyIced(uint8 v, bytes32 r, bytes32 s) payable { buyIcedRecipient(msg.sender, v, r, s); }
 
-    /// Pre: Generated signature (see Pre: text of buyLiquid()) for a specific address
-    /// Post: Bought MLN and DOT tokens on behalf of recipient accoriding to ICED_RATE and msg.value of ICED tranche
+    /// Pre: Valid signature received from https://contribution.melonport.com
+    /// Post: Bought mln and dot tokens of iced tranche accoriding to ICED_RATE and msg.value on behalf of recipient
     function buyIcedRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer(v, r, s)
@@ -170,13 +170,12 @@ contract Contribution is SafeMath {
         IcedTokenBought(recipient, msg.value, tokens);
     }
 
-    /// Pre: Buy entry point. All contribution depositors must have read and accpeted the legal agreement on
-    ///  https://contribution.melonport.com. By doing so they receive the signature sig.v, sig.r and sig.s needed to contribute.
-    /// Post: Bought MLN and DOT tokens accoriding to liquidRate() and msg.value of LIQUID tranche
+    /// Pre: Valid signature received from https://contribution.melonport.com
+    /// Post: Bought mln and dot tokens of liquid tranche accoriding to liquidRate() and msg.value
     function buyLiquid(uint8 v, bytes32 r, bytes32 s) payable { buyLiquidRecipient(msg.sender, v, r, s); }
 
-    /// Pre: Generated signature (see Pre: text of buyLiquid()) for a specific address
-    /// Post: Bought MLN and DOT tokens on behalf of recipient accoriding to liquidRate() and msg.value of LIQUID tranche
+    /// Pre: Valid signature received from https://contribution.melonport.com
+    /// Post: Bought mln and dot tokens of liquid tranche accoriding to liquidRate() and msg.value on behlf of recipient
     function buyLiquidRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer(v, r, s)
@@ -193,8 +192,8 @@ contract Contribution is SafeMath {
         LiquidTokenBought(recipient, msg.value, tokens);
     }
 
-    /// Pre: BTCS only before contribution period, BTCS has exclusiv right to buy up to 25% of all tokens
-    /// Post: BTCS bought MLN and DPT tokens accoriding to ICED_RATE and msg.value of ICED tranche
+    /// Pre: BTCS before contribution period, BTCS has exclusiv right to buy up to 25% of all tokens
+    /// Post: Bought mln and dot tokens of iced tranche accoriding to ICED_RATE and msg.value on behalf of recipient
     function btcsBuyIcedRecipient(address recipient)
         payable
         only_btcs
@@ -229,7 +228,7 @@ contract Contribution is SafeMath {
     }
 
     /// Pre: Melonport only once, after contribution period
-    /// Post: Melonport transfers all tokens of this contract to recipient
+    /// Post: Melonport transfers all tokens from "this" to parity
     function transferParityToken()
         only_melonport
         now_past(endTime)
