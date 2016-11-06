@@ -114,7 +114,7 @@ contract Contribution is SafeMath {
     // CONSTANT METHODS
 
     /// Pre: startTime, endTime specified in constructor,
-    /// Post: Liquid rate, one ether equals a combined total of liquidRate() / DIVISOR_RATE mln and tot tokens
+    /// Post: Liquid rate, one ether equals a combined total of liquidRate() / DIVISOR_RATE mln and dot tokens
     function liquidRate() constant returns (uint) {
         // Four liquid tiers
         if (startTime <= now && now < startTime + 2 weeks)
