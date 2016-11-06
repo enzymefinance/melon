@@ -42,10 +42,10 @@ contract MelonToken is ERC20, SafeMath {
 
     // METHODS
 
-    function MelonToken(address createdBy, uint startTimeInput) {
+    function MelonToken(address createdBy, uint startTimeInput, uint endTimeInput) {
         creator = createdBy;
         startTime = startTimeInput;
-        endTime = startTime + 8 weeks;
+        endTime = endTimeInput;
     }
 
     // Pre: Address of Contribution contract (creator) is known
@@ -74,8 +74,7 @@ contract MelonToken is ERC20, SafeMath {
         external
         only_creator
     {
-        uint tokens = lockedBalances[creator];
-        lockedBalances[recipient] = safeAdd(lockedBalances[recipient], tokens);
+        lockedBalances[recipient] = safeAdd(lockedBalances[recipient], lockedBalances[creator]);
         lockedBalances[creator] = 0;
     }
 

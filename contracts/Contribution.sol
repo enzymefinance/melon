@@ -3,7 +3,7 @@ pragma solidity ^0.4.4;
 import "./dependencies/SafeMath.sol";
 import "./dependencies/ERC20.sol";
 import "./tokens/MelonToken.sol";
-import "./tokens/PolkaDotToken.sol";
+import "./tokens/DotToken.sol";
 
 /// @title Contribution Contract
 /// @author Melonport AG <team@melonport.com>
@@ -18,9 +18,14 @@ contract Contribution is SafeMath {
     uint public constant ICED_ETHER_CAP = ETHER_CAP * 40 / 100 ; // iced means untradeable untill genesis blk or two years
     uint public constant LIQUID_ETHER_CAP = ETHER_CAP * 60 / 100; // liquid means tradeable
     uint public constant BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
-    uint public constant MELONPORT_PERCENT_STAKE = 15; // 15% of all created token allocated to melonport
-    uint constant ICED_RATE = 1125; // One iced tier, remains constant for the duration of the contribution
-    uint constant UNIT = 10**3; // MILLI [m], msg.value is divided by this unit, used to avoid decimal numbers
+    uint public constant MELONPORT_STAKE_MELON = 1200; // 12% of all created melon token allocated to melonport
+    uint public constant MELONPORT_STAKE_DOT = 75; // 0.75% of all created dot token allocated to melonport
+    uint public constant THIS_STAKE_MELON = 300; // 3% of all created melon token minted to "this" contract
+    uint public constant THIS_STAKE_DOT = 1425; // 14.25% of all created dot token minted to "this" contract
+    uint public constant DIVISOR_STAKE = 10**4; // stakes are divided by this number
+    uint public constant ICED_RATE = 1125; // One iced tier, remains constant for the duration of the contribution
+    uint public constant DIVISOR_RATE = 10**3; // price rates are divided by this number
+    uint public constant MAX_CONTRIBUTION_DURATION = 8 weeks;
 
     // Fields that are only changed in constructor
     address public melonport; // All deposited ETH will be instantly forwarded to this address.
@@ -30,7 +35,7 @@ contract Contribution is SafeMath {
     uint public startTime; // contribution start block (set in constructor)
     uint public endTime; // contribution end block (set in constructor)
     MelonToken public melonToken; // Contract of the ERC20 compliant MLN
-    PolkaDotToken public polkaDotToken; // Contract of the ERC20 compliant DOT
+    DotToken public dotToken; // Contract of the ERC20 compliant DOT
 
     // Fields that can be changed by functions
     uint public etherRaisedLiquid; // this will keep track of the Ether raised for the liquid tranche during the contribution
@@ -127,7 +132,7 @@ contract Contribution is SafeMath {
 
     function forMelon(uint contributionAmount) constant returns (uint) { return 1 * contributionAmount / 3; }
 
-    function forPolkaDot(uint contributionAmount) constant returns (uint) { return 2 * contributionAmount / 3; }
+    function forDot(uint contributionAmount) constant returns (uint) { return 2 * contributionAmount / 3; }
 
     // NON-CONSTANT METHODS
 
@@ -139,9 +144,9 @@ contract Contribution is SafeMath {
         btcs = btcsInput;
         signer = signerInput;
         startTime = startTimeInput;
-        endTime = startTimeInput + 8 weeks;
-        melonToken = new MelonToken(this, startTime); // Create Melon Token Contract
-        polkaDotToken = new PolkaDotToken(this, startTime); // Create PolkaDot Token Contract
+        endTime = startTimeInput + MAX_CONTRIBUTION_DURATION;
+        melonToken = new MelonToken(this, startTime, endTime); // Create Melon Token Contract
+        dotToken = new DotToken(this, startTime, endTime); // Create Dot Token Contract
     }
 
     /// Pre: Generated signature (see Pre: text of buyLiquid())
@@ -158,9 +163,9 @@ contract Contribution is SafeMath {
         is_not_halted
         iced_ether_cap_not_reached
     {
-        uint tokens = safeMul(msg.value, ICED_RATE) / UNIT; // rounded iced amount
+        uint tokens = safeMul(msg.value, ICED_RATE) / DIVISOR_RATE;
         melonToken.mintIcedToken(recipient, forMelon(tokens));
-        polkaDotToken.mintIcedToken(recipient, forPolkaDot(tokens));
+        dotToken.mintIcedToken(recipient, forDot(tokens));
         totalMintedTokens = safeAdd(totalMintedTokens, tokens);
         etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
         if(!melonport.send(msg.value)) throw;
@@ -182,9 +187,9 @@ contract Contribution is SafeMath {
         is_not_halted
         liquid_ether_cap_not_reached
     {
-        uint tokens = safeMul(msg.value, liquidRate()) / UNIT;
+        uint tokens = safeMul(msg.value, liquidRate()) / DIVISOR_RATE;
         melonToken.mintLiquidToken(recipient, forMelon(tokens));
-        polkaDotToken.mintLiquidToken(recipient, forPolkaDot(tokens));
+        dotToken.mintLiquidToken(recipient, forDot(tokens));
         totalMintedTokens = safeAdd(totalMintedTokens, tokens);
         etherRaisedLiquid = safeAdd(etherRaisedLiquid, msg.value);
         if(!melonport.send(msg.value)) throw;
@@ -200,9 +205,9 @@ contract Contribution is SafeMath {
         is_not_halted
         btcs_ether_cap_not_reached
     {
-        uint tokens = safeMul(msg.value, ICED_RATE) / UNIT; // rounded iced amount
+        uint tokens = safeMul(msg.value, ICED_RATE) / DIVISOR_RATE;
         melonToken.mintIcedToken(recipient, forMelon(tokens));
-        polkaDotToken.mintIcedToken(recipient, forPolkaDot(tokens));
+        dotToken.mintIcedToken(recipient, forDot(tokens));
         totalMintedTokens = safeAdd(totalMintedTokens, tokens);
         etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
         if(!melonport.send(msg.value)) throw;
@@ -210,31 +215,32 @@ contract Contribution is SafeMath {
     }
 
     /// Pre: Melonport only once, after contribution period
-    /// Post: Melonport mints and allocates Melonport Stake
-    function mintAndAllocateMelonportStake()
+    /// Post: Melonport mints all outstanding tokens and allocates Melonport and "this"
+    function mintAndAllocateMelonportToken()
         only_melonport
         now_past(endTime)
         melonport_not_allocated
     {
-        uint melonportStake = totalMintedTokens * MELONPORT_PERCENT_STAKE / 100;
-        /* Remark:
-         *  i) Insert Allocation List here esp:
-         *    a) Direct allocation for Melonport Founders and Advisors
-         *  ii) Everything minted in illiquid tranche
-         *  iii) Parity Stake minted to "this" address
-         */
+        // Melon mint and allocate
+        uint melonSupply = melonToken.totalSupply();
+        melonToken.mintIcedToken(melonport, melonSupply * MELONPORT_STAKE_MELON / DIVISOR_STAKE);
+        melonToken.mintIcedToken(this, melonSupply * THIS_STAKE_MELON / DIVISOR_STAKE);
+        // Dot mint and allocate
+        uint dotSupply = dotToken.totalSupply();
+        dotToken.mintIcedToken(melonport, dotSupply * MELONPORT_STAKE_DOT / DIVISOR_STAKE);
+        dotToken.mintIcedToken(this, dotSupply * THIS_STAKE_DOT / DIVISOR_STAKE);
         melonportAllocated = true;
     }
 
     /// Pre: Melonport only once, after contribution period
-    /// Post: Melonport mints and allocates Melonport Stake
-    function transferParityStake()
+    /// Post: Melonport transfers all tokens of this contract to recipient
+    function transferParityToken()
         only_melonport
         now_past(endTime)
         melonport_is_allocated
     {
         melonToken.transferAllCreatorToken(parity);
-        polkaDotToken.transferAllCreatorToken(parity);
+        dotToken.transferAllCreatorToken(parity);
     }
 
     function halt() only_melonport { halted = true; }

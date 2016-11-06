@@ -66,7 +66,7 @@ contract('Contribution', (accounts) => {
     }).then((result) => {
       return contract.polkaDotToken();
     }).then((result) => {
-      polkaDot_contract = PolkaDotToken.at(result);
+      polkaDot_contract = DotToken.at(result);
       done();
     });
   });
