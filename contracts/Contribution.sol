@@ -52,62 +52,62 @@ contract Contribution is SafeMath {
 
     modifier is_signer(uint8 v, bytes32 r, bytes32 s) {
         bytes32 hash = sha256(msg.sender);
-        if (ecrecover(hash,v,r,s) != signer) throw;
+        assert(ecrecover(hash,v,r,s) == signer);
         _;
     }
 
     modifier only_melonport {
-        if (msg.sender != melonport) throw;
+        assert(msg.sender == melonport);
         _;
     }
 
     modifier only_btcs {
-        if (msg.sender != btcs) throw;
+        assert(msg.sender == btcs);
         _;
     }
 
     modifier is_not_halted {
-        if (halted) throw;
+        assert(!halted);
         _;
     }
 
     modifier iced_ether_cap_not_reached {
-        if (safeAdd(etherRaisedIced, msg.value) > ICED_ETHER_CAP) throw;
+        assert(safeAdd(etherRaisedIced, msg.value) <= ICED_ETHER_CAP);
         _;
     }
 
     modifier liquid_ether_cap_not_reached {
-        if (safeAdd(etherRaisedLiquid, msg.value) > LIQUID_ETHER_CAP) throw;
+        assert(safeAdd(etherRaisedLiquid, msg.value) <= LIQUID_ETHER_CAP);
         _;
     }
 
     modifier btcs_ether_cap_not_reached {
-        if (safeAdd(etherRaisedIced, msg.value) > BTCS_ETHER_CAP) throw;
+        assert(safeAdd(etherRaisedIced, msg.value) <= BTCS_ETHER_CAP);
         _;
     }
 
     modifier melonport_not_allocated {
-        if (melonportAllocated) throw;
+        assert(!melonportAllocated);
         _;
     }
 
     modifier melonport_is_allocated {
-        if (!melonportAllocated) throw;
+        assert(melonportAllocated);
         _;
     }
 
     modifier now_at_least(uint x) {
-        if (now < x) throw;
+        assert(now >= x);
         _;
     }
 
     modifier now_past(uint x) {
-        if (now <= x) throw;
+        assert(now > x);
         _;
     }
 
     modifier now_at_most(uint x) {
-        if (now > x) throw;
+        assert(now <= x);
         _;
     }
 
@@ -166,7 +166,7 @@ contract Contribution is SafeMath {
         melonToken.mintIcedToken(recipient, forMelon(tokens));
         dotToken.mintIcedToken(recipient, forDot(tokens));
         etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
-        if(!melonport.send(msg.value)) throw;
+        assert(melonport.send(msg.value));
         IcedTokenBought(recipient, msg.value, tokens);
     }
 
@@ -188,7 +188,7 @@ contract Contribution is SafeMath {
         melonToken.mintLiquidToken(recipient, forMelon(tokens));
         dotToken.mintLiquidToken(recipient, forDot(tokens));
         etherRaisedLiquid = safeAdd(etherRaisedLiquid, msg.value);
-        if(!melonport.send(msg.value)) throw;
+        assert(melonport.send(msg.value));
         LiquidTokenBought(recipient, msg.value, tokens);
     }
 
@@ -205,7 +205,7 @@ contract Contribution is SafeMath {
         melonToken.mintIcedToken(recipient, forMelon(tokens));
         dotToken.mintIcedToken(recipient, forDot(tokens));
         etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
-        if(!melonport.send(msg.value)) throw;
+        assert(melonport.send(msg.value));
         IcedTokenBought(recipient, msg.value, tokens);
     }
 

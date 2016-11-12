@@ -25,12 +25,12 @@ contract MelonToken is ERC20, SafeMath {
     // MODIFIERS
 
     modifier only_creator {
-        if (msg.sender != creator) throw;
+        assert(msg.sender == creator);
         _;
     }
 
     modifier now_past(uint x) {
-        if (now <= x) throw;
+        assert(now > x);
         _;
     }
 
