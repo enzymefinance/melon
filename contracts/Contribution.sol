@@ -15,17 +15,18 @@ contract Contribution is SafeMath {
 
     // Constant fields
     uint public constant ETHER_CAP = 1800000 ether; // max amount raised during contribution
+    uint public constant MAX_CONTRIBUTION_DURATION = 8 weeks; // max amount in seconds of contribution period
+    uint public constant MAX_TOTAL_TOKEN_AMOUNT = 1971000; // max amount of total tokens raised during contribution
     uint public constant ICED_ETHER_CAP = ETHER_CAP * 40 / 100 ; // iced means untradeable untill genesis blk or two years
     uint public constant LIQUID_ETHER_CAP = ETHER_CAP * 60 / 100; // liquid means tradeable
     uint public constant BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
     uint public constant MELONPORT_STAKE_MELON = 1200; // 12% of all created melon token allocated to melonport
     uint public constant MELONPORT_STAKE_DOT = 75; // 0.75% of all created dot token allocated to melonport
-    uint public constant THIS_STAKE_MELON = 300; // 3% of all created melon token minted to "this" contract
-    uint public constant THIS_STAKE_DOT = 1425; // 14.25% of all created dot token minted to "this" contract
+    uint public constant PARITY_STAKE_MELON = 300; // 3% of all created melon token minted to "this" contract
+    uint public constant PARITY_STAKE_DOT = 1425; // 14.25% of all created dot token minted to "this" contract
     uint public constant DIVISOR_STAKE = 10**4; // stakes are divided by this number
     uint public constant ICED_RATE = 1125; // One iced tier, remains constant for the duration of the contribution
     uint public constant DIVISOR_RATE = 10**3; // price rates are divided by this number
-    uint public constant MAX_CONTRIBUTION_DURATION = 8 weeks; // max amount in seconds of contribution period
 
     // Fields that are only changed in constructor
     address public melonport; // All deposited ETH will be instantly forwarded to this address.
@@ -40,7 +41,7 @@ contract Contribution is SafeMath {
     // Fields that can be changed by functions
     uint public etherRaisedLiquid; // this will keep track of the Ether raised for the liquid tranche during the contribution
     uint public etherRaisedIced; // this will keep track of the Ether raised for the iced tranche during the contribution
-    bool public melonportAllocated; // this will change to true when melonport tokens are minted and allocated
+    bool public excessCompanyTokenBurned; // this will change to true when melonport tokens are minted and allocated
     bool public halted; // the melonport address can set this to true to halt the contribution due to an emergency
 
     // EVENTS
@@ -86,13 +87,8 @@ contract Contribution is SafeMath {
         _;
     }
 
-    modifier melonport_not_allocated {
-        assert(!melonportAllocated);
-        _;
-    }
-
-    modifier melonport_is_allocated {
-        assert(melonportAllocated);
+    modifier excess_company_token_not_burned {
+        assert(!excessCompanyTokenBurned);
         _;
     }
 
@@ -129,8 +125,12 @@ contract Contribution is SafeMath {
         return 0;
     }
 
+    /// Pre: Amount contributed gets allocated in both melon and dot token
+    /// Post: One third of the contribution amount is allocated to melon token
     function forMelon(uint contributionAmount) constant returns (uint) { return 1 * contributionAmount / 3; }
 
+    /// Pre: Amount contributed gets allocated in both melon and dot token
+    /// Post: Two thirds of the contribution amount is allocated to dot token
     function forDot(uint contributionAmount) constant returns (uint) { return 2 * contributionAmount / 3; }
 
     // NON-CONSTANT METHODS
@@ -146,6 +146,13 @@ contract Contribution is SafeMath {
         endTime = startTimeInput + MAX_CONTRIBUTION_DURATION;
         melonToken = new MelonToken(this, startTime, endTime); // Create Melon Token Contract
         dotToken = new DotToken(this, startTime, endTime); // Create Dot Token Contract
+        // Mint melon and dot token and allocate stakes to companies
+        uint maxMelonSupply = forMelon(MAX_TOTAL_TOKEN_AMOUNT);
+        melonToken.mintIcedToken(melonport, maxMelonSupply * MELONPORT_STAKE_MELON / DIVISOR_STAKE);
+        melonToken.mintIcedToken(parity, maxMelonSupply * PARITY_STAKE_MELON / DIVISOR_STAKE);
+        uint maxDotSupply = forDot(MAX_TOTAL_TOKEN_AMOUNT);
+        dotToken.mintIcedToken(melonport, maxDotSupply * MELONPORT_STAKE_DOT / DIVISOR_STAKE);
+        dotToken.mintIcedToken(parity, maxDotSupply * PARITY_STAKE_DOT / DIVISOR_STAKE);
     }
 
     /// Pre: Valid signature received from https://contribution.melonport.com
@@ -209,33 +216,24 @@ contract Contribution is SafeMath {
         IcedTokenBought(recipient, msg.value, tokens);
     }
 
-    /// Pre: Melonport only once, after contribution period
-    /// Post: Melonport mints all outstanding tokens and allocates Melonport and "this"
-    function mintAndAllocateMelonportToken()
-        only_melonport
+    /// Pre: Anybody can trigger this but only once and only after contribution period
+    /// Post: This burns of all to excess tokens created and allocated to the respective companies at contract creation
+    function burnCompanyExcessToken()
         now_past(endTime)
-        melonport_not_allocated
+        excess_company_token_not_burned
     {
-        // Melon mint and allocate
+        // Calculate differences for melon token allocation to companies
+        uint maxMelonSupply = forMelon(MAX_TOTAL_TOKEN_AMOUNT);
         uint melonSupply = melonToken.totalSupply();
-        melonToken.mintIcedToken(melonport, melonSupply * MELONPORT_STAKE_MELON / DIVISOR_STAKE);
-        melonToken.mintIcedToken(this, melonSupply * THIS_STAKE_MELON / DIVISOR_STAKE);
-        // Dot mint and allocate
+        uint melonExcessAmount = maxMelonSupply - melonSupply;
+        melonToken.burnCompanyToken(melonport, melonExcessAmount * MELONPORT_STAKE_MELON / DIVISOR_STAKE);
+        melonToken.burnCompanyToken(parity, melonExcessAmount * PARITY_STAKE_MELON / DIVISOR_STAKE);
+        // Calculate differences for dot token allocation to companies
+        uint maxDotSupply = forDot(MAX_TOTAL_TOKEN_AMOUNT);
         uint dotSupply = dotToken.totalSupply();
-        dotToken.mintIcedToken(melonport, dotSupply * MELONPORT_STAKE_DOT / DIVISOR_STAKE);
-        dotToken.mintIcedToken(this, dotSupply * THIS_STAKE_DOT / DIVISOR_STAKE);
-        melonportAllocated = true;
-    }
-
-    /// Pre: Melonport only once, after contribution period
-    /// Post: Melonport transfers all tokens from "this" to parity
-    function transferParityToken()
-        only_melonport
-        now_past(endTime)
-        melonport_is_allocated
-    {
-        melonToken.transferAllCreatorToken(parity);
-        dotToken.transferAllCreatorToken(parity);
+        uint dotExcessAmount = maxDotSupply - dotSupply;
+        dotToken.burnCompanyToken(melonport, dotExcessAmount * MELONPORT_STAKE_DOT / DIVISOR_STAKE);
+        dotToken.burnCompanyToken(parity, dotExcessAmount * PARITY_STAKE_DOT / DIVISOR_STAKE);
     }
 
     function halt() only_melonport { halted = true; }
