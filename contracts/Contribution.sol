@@ -47,6 +47,10 @@ contract Contribution is SafeMath {
     // Fields that can be changed by functions
     uint public etherRaisedLiquid; // this will keep track of the Ether raised for the liquid tranche during the contribution
     uint public etherRaisedIced; // this will keep track of the Ether raised for the iced tranche during the contribution
+    mapping (address => uint) etherLiquidContributors;
+    mapping (address => uint) etherIcedContributors;
+    mapping (address => bool) isRefundedLiquid; // In the event of ether cap reached before min contribution period, contributors can refund excess amount
+    mapping (address => bool) isRefundedIced;    
     bool public excessCompanyTokenBurned; // this will change to true when melonport tokens are minted and allocated
     bool public halted; // the melonport address can set this to true to halt the contribution due to an emergency
 
@@ -78,13 +82,23 @@ contract Contribution is SafeMath {
         _;
     }
 
-    modifier min_duration_not_reached_or_iced_ether_cap_not_reached {
-        assert(now < minDurationTime || safeAdd(etherRaisedIced, msg.value) <= ICED_ETHER_CAP);
+    modifier iced_ether_cap_not_reached_or_now_before_min_duration {
+        assert(safeAdd(etherRaisedIced, msg.value) <= ICED_ETHER_CAP || now < minDurationTime);
         _;
     }
 
-    modifier min_duration_not_reached_or_liquid_ether_cap_not_reached {
-        assert(now < minDurationTime || safeAdd(etherRaisedLiquid, msg.value) <= LIQUID_ETHER_CAP);
+    modifier raised_past_iced_ether_cap {
+        assert(etherRaisedIced > ICED_ETHER_CAP);
+        _;
+    }
+
+    modifier liquid_ether_cap_not_reached_or_now_before_min_duration {
+        assert(safeAdd(etherRaisedLiquid, msg.value) <= LIQUID_ETHER_CAP || now < minDurationTime);
+        _;
+    }
+
+    modifier raised_past_liquid_ether_cap {
+        assert(etherRaisedLiquid > LIQUID_ETHER_CAP);
         _;
     }
 
@@ -95,6 +109,16 @@ contract Contribution is SafeMath {
 
     modifier excess_company_token_not_burned {
         assert(!excessCompanyTokenBurned);
+        _;
+    }
+
+    modifier msg_sender_not_refunded_iced {
+        assert(!isRefundedIced[msg.sender]);
+        _;
+    }
+
+    modifier msg_sender_not_refunded_liquid {
+        assert(!isRefundedLiquid[msg.sender]);
         _;
     }
 
@@ -174,13 +198,14 @@ contract Contribution is SafeMath {
         now_at_least(startTime)
         now_at_most(endTime)
         is_not_halted
-        min_duration_not_reached_or_iced_ether_cap_not_reached
+        iced_ether_cap_not_reached_or_now_before_min_duration
     {
         uint tokens = safeMul(msg.value, ICED_RATE) / DIVISOR_RATE;
         melonToken.mintIcedToken(recipient, forMelon(tokens));
         dotToken.mintIcedToken(recipient, forDot(tokens));
         etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
         assert(melonport.send(msg.value));
+        etherIcedContributors[msg.sender] = safeAdd(etherIcedContributors[msg.sender], msg.value);
         IcedTokenBought(recipient, msg.value, tokens);
     }
 
@@ -196,13 +221,14 @@ contract Contribution is SafeMath {
         now_at_least(startTime)
         now_at_most(endTime)
         is_not_halted
-        min_duration_not_reached_or_liquid_ether_cap_not_reached
+        liquid_ether_cap_not_reached_or_now_before_min_duration
     {
         uint tokens = safeMul(msg.value, liquidRate()) / DIVISOR_RATE;
         melonToken.mintLiquidToken(recipient, forMelon(tokens));
         dotToken.mintLiquidToken(recipient, forDot(tokens));
         etherRaisedLiquid = safeAdd(etherRaisedLiquid, msg.value);
         assert(melonport.send(msg.value));
+        etherLiquidContributors[msg.sender] = safeAdd(etherLiquidContributors[msg.sender], msg.value);
         LiquidTokenBought(recipient, msg.value, tokens);
     }
 
@@ -230,23 +256,50 @@ contract Contribution is SafeMath {
         excess_company_token_not_burned
     {
         // Calculate differences for melon token allocation to companies
-        uint maxMelonSupply = forMelon(MAX_TOTAL_TOKEN_AMOUNT);
-        uint melonSupply = melonToken.totalSupply();
-        uint melonExcessAmount = maxMelonSupply - melonSupply;
+        uint maxMelonSupply = forMelon(MAX_TOTAL_TOKEN_AMOUNT); // Max melon token amount
+        uint melonSupply = melonToken.totalSupply(); // Actual melon token amount
+        uint melonExcessAmount = maxMelonSupply - melonSupply; // Difference between the two above
         melonToken.burnCompanyToken(melonport, melonExcessAmount * MELONPORT_STAKE_MELON / DIVISOR_STAKE);
         melonToken.burnCompanyToken(parity, melonExcessAmount * PARITY_STAKE_MELON / DIVISOR_STAKE);
         // Calculate differences for dot token allocation to companies
-        uint maxDotSupply = forDot(MAX_TOTAL_TOKEN_AMOUNT);
-        uint dotSupply = dotToken.totalSupply();
-        uint dotExcessAmount = maxDotSupply - dotSupply;
+        uint maxDotSupply = forDot(MAX_TOTAL_TOKEN_AMOUNT); // Max dot token amount
+        uint dotSupply = dotToken.totalSupply(); // Actual dot token amount
+        uint dotExcessAmount = maxDotSupply - dotSupply; // Diffrence between the two above
         dotToken.burnCompanyToken(melonport, dotExcessAmount * MELONPORT_STAKE_DOT / DIVISOR_STAKE);
         dotToken.burnCompanyToken(parity, dotExcessAmount * PARITY_STAKE_DOT / DIVISOR_STAKE);
+    }
+
+    // Pre: Contributor only once, after contribution period if more contributions received than ICED_ETHER_CAP
+    // Post: Refunds the excess amount received proportionally with ether amount contributed by Contributor
+    function refund_iced()
+        now_past(endTime)
+        raised_past_iced_ether_cap
+        msg_sender_not_refunded_iced
+    {
+        address contributor = msg.sender;
+        uint etherExcessAmount = etherRaisedIced - ICED_ETHER_CAP;
+        uint refundAmount = etherExcessAmount * etherIcedContributors[contributor] / ICED_ETHER_CAP;
+        assert(contributor.send(refundAmount));
+        isRefundedIced[contributor] = true;
+    }
+
+    // Pre: Contributor only once, after contribution period if more contributions received than LIQUID_ETHER_CAP
+    // Post: Refunds the excess amount received proportionally with ether amount contributed by Contributor
+    function refund_liquid()
+        now_past(endTime)
+        raised_past_liquid_ether_cap
+        msg_sender_not_refunded_liquid
+    {
+        address contributor = msg.sender;
+        uint etherExcessAmount = etherRaisedLiquid - LIQUID_ETHER_CAP;
+        uint refundAmount = etherExcessAmount * etherLiquidContributors[contributor] / LIQUID_ETHER_CAP;
+        assert(contributor.send(refundAmount));
+        isRefundedLiquid[contributor] = true;
     }
 
     function halt() only_melonport { halted = true; }
 
     function unhalt() only_melonport { halted = false; }
 
-    function changeCreator(address newCreator) only_melonport { melonport = newCreator; }
-
+    function changeMelonportAddress(address newAddress) only_melonport { melonport = newAddress; }
 }
