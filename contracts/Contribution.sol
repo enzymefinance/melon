@@ -15,6 +15,7 @@ contract Contribution is SafeMath {
 
     // Constant fields
     uint public constant ETHER_CAP = 1800000 ether; // max amount raised during contribution
+    uint public constant MIN_CONTRIBUTION_DURATION = 1 hours; // min amount in seconds of contribution period
     uint public constant MAX_CONTRIBUTION_DURATION = 8 weeks; // max amount in seconds of contribution period
     uint public constant MAX_TOTAL_TOKEN_AMOUNT = 1971000; // max amount of total tokens raised during contribution
     uint public constant ICED_ETHER_CAP = ETHER_CAP * 40 / 100 ; // iced means untradeable untill genesis blk or two years
@@ -26,6 +27,10 @@ contract Contribution is SafeMath {
     uint public constant PARITY_STAKE_DOT = 1425; // 14.25% of all created dot token minted to "this" contract
     uint public constant DIVISOR_STAKE = 10**4; // stakes are divided by this number
     uint public constant ICED_RATE = 1125; // One iced tier, remains constant for the duration of the contribution
+    uint public constant LIQUID_RATE_FIRST = 1075; // Four liquid tiers, each valid for two weeks
+    uint public constant LIQUID_RATE_SECOND = 1050;
+    uint public constant LIQUID_RATE_THIRD = 1025;
+    uint public constant LIQUID_RATE_FOURTH = 1000;
     uint public constant DIVISOR_RATE = 10**3; // price rates are divided by this number
 
     // Fields that are only changed in constructor
@@ -33,8 +38,9 @@ contract Contribution is SafeMath {
     address public parity; // Token allocation for company
     address public btcs; // Bitcoin Suisse allocation option
     address public signer; // signer address see function() {} for comments
-    uint public startTime; // contribution start block (set in constructor)
-    uint public endTime; // contribution end block (set in constructor)
+    uint public startTime; // contribution start time in seconds
+    uint public minDurationTime; // contribution minimum duration in seconds
+    uint public endTime; // contribution end time in seconds
     MelonToken public melonToken; // Contract of the ERC20 compliant MLN
     DotToken public dotToken; // Contract of the ERC20 compliant DOT
 
@@ -72,13 +78,13 @@ contract Contribution is SafeMath {
         _;
     }
 
-    modifier iced_ether_cap_not_reached {
-        assert(safeAdd(etherRaisedIced, msg.value) <= ICED_ETHER_CAP);
+    modifier min_duration_not_reached_or_iced_ether_cap_not_reached {
+        assert(now < minDurationTime || safeAdd(etherRaisedIced, msg.value) <= ICED_ETHER_CAP);
         _;
     }
 
-    modifier liquid_ether_cap_not_reached {
-        assert(safeAdd(etherRaisedLiquid, msg.value) <= LIQUID_ETHER_CAP);
+    modifier min_duration_not_reached_or_liquid_ether_cap_not_reached {
+        assert(now < minDurationTime || safeAdd(etherRaisedLiquid, msg.value) <= LIQUID_ETHER_CAP);
         _;
     }
 
@@ -114,13 +120,13 @@ contract Contribution is SafeMath {
     function liquidRate() constant returns (uint) {
         // Four liquid tiers
         if (startTime <= now && now < startTime + 2 weeks)
-            return 1075;
+            return LIQUID_RATE_FIRST;
         if (startTime + 2 weeks <= now && now < startTime + 4 weeks)
-            return 1050;
+            return LIQUID_RATE_SECOND;
         if (startTime + 4 weeks <= now && now < startTime + 6 weeks)
-            return 1025;
+            return LIQUID_RATE_THIRD;
         if (startTime + 6 weeks <= now && now < endTime)
-            return 1000;
+            return LIQUID_RATE_FOURTH;
         // Before or after contribution period
         return 0;
     }
@@ -143,7 +149,8 @@ contract Contribution is SafeMath {
         btcs = btcsInput;
         signer = signerInput;
         startTime = startTimeInput;
-        endTime = startTimeInput + MAX_CONTRIBUTION_DURATION;
+        minDurationTime = startTime + MIN_CONTRIBUTION_DURATION;
+        endTime = startTime + MAX_CONTRIBUTION_DURATION;
         melonToken = new MelonToken(this, startTime, endTime); // Create Melon Token Contract
         dotToken = new DotToken(this, startTime, endTime); // Create Dot Token Contract
         // Mint melon and dot token and allocate stakes to companies
@@ -167,7 +174,7 @@ contract Contribution is SafeMath {
         now_at_least(startTime)
         now_at_most(endTime)
         is_not_halted
-        iced_ether_cap_not_reached
+        min_duration_not_reached_or_iced_ether_cap_not_reached
     {
         uint tokens = safeMul(msg.value, ICED_RATE) / DIVISOR_RATE;
         melonToken.mintIcedToken(recipient, forMelon(tokens));
@@ -189,7 +196,7 @@ contract Contribution is SafeMath {
         now_at_least(startTime)
         now_at_most(endTime)
         is_not_halted
-        liquid_ether_cap_not_reached
+        min_duration_not_reached_or_liquid_ether_cap_not_reached
     {
         uint tokens = safeMul(msg.value, liquidRate()) / DIVISOR_RATE;
         melonToken.mintLiquidToken(recipient, forMelon(tokens));
