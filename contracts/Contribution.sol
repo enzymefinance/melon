@@ -45,12 +45,12 @@ contract Contribution is SafeMath {
     DotToken public dotToken; // Contract of the ERC20 compliant DOT
 
     // Fields that can be changed by functions
-    uint public etherRaisedLiquid; // this will keep track of the Ether raised for the liquid tranche during the contribution
     uint public etherRaisedIced; // this will keep track of the Ether raised for the iced tranche during the contribution
-    mapping (address => uint) etherLiquidContributors;
-    mapping (address => uint) etherIcedContributors;
+    uint public etherRaisedLiquid; // this will keep track of the Ether raised for the liquid tranche during the contribution
+    mapping (address => uint) etherIcedContributors; // how much a contributor contributed to the iced tier in ether
+    mapping (address => uint) etherLiquidContributors; // how much a contributor contributed to the liquid tier in ether
+    mapping (address => bool) isRefundedIced; // In the event of ether cap reached before min contribution period, contributors can refund excess amount
     mapping (address => bool) isRefundedLiquid; // In the event of ether cap reached before min contribution period, contributors can refund excess amount
-    mapping (address => bool) isRefundedIced;    
     bool public excessCompanyTokenBurned; // this will change to true when melonport tokens are minted and allocated
     bool public halted; // the melonport address can set this to true to halt the contribution due to an emergency
 
@@ -157,11 +157,11 @@ contract Contribution is SafeMath {
 
     /// Pre: Amount contributed gets allocated in both melon and dot token
     /// Post: One third of the contribution amount is allocated to melon token
-    function forMelon(uint contributionAmount) constant returns (uint) { return 1 * contributionAmount / 3; }
+    function oneThirdOf(uint amount) constant returns (uint) { return 1 * amount / 3; }
 
     /// Pre: Amount contributed gets allocated in both melon and dot token
     /// Post: Two thirds of the contribution amount is allocated to dot token
-    function forDot(uint contributionAmount) constant returns (uint) { return 2 * contributionAmount / 3; }
+    function twoThirdsOf(uint amount) constant returns (uint) { return 2 * amount / 3; }
 
     // NON-CONSTANT METHODS
 
@@ -178,10 +178,10 @@ contract Contribution is SafeMath {
         melonToken = new MelonToken(this, startTime, endTime); // Create Melon Token Contract
         dotToken = new DotToken(this, startTime, endTime); // Create Dot Token Contract
         // Mint melon and dot token and allocate stakes to companies
-        uint maxMelonSupply = forMelon(MAX_TOTAL_TOKEN_AMOUNT);
+        uint maxMelonSupply = oneThirdOf(MAX_TOTAL_TOKEN_AMOUNT);
         melonToken.mintIcedToken(melonport, maxMelonSupply * MELONPORT_STAKE_MELON / DIVISOR_STAKE);
         melonToken.mintIcedToken(parity, maxMelonSupply * PARITY_STAKE_MELON / DIVISOR_STAKE);
-        uint maxDotSupply = forDot(MAX_TOTAL_TOKEN_AMOUNT);
+        uint maxDotSupply = twoThirdsOf(MAX_TOTAL_TOKEN_AMOUNT);
         dotToken.mintIcedToken(melonport, maxDotSupply * MELONPORT_STAKE_DOT / DIVISOR_STAKE);
         dotToken.mintIcedToken(parity, maxDotSupply * PARITY_STAKE_DOT / DIVISOR_STAKE);
     }
@@ -201,8 +201,8 @@ contract Contribution is SafeMath {
         iced_ether_cap_not_reached_or_now_before_min_duration
     {
         uint tokens = safeMul(msg.value, ICED_RATE) / DIVISOR_RATE;
-        melonToken.mintIcedToken(recipient, forMelon(tokens));
-        dotToken.mintIcedToken(recipient, forDot(tokens));
+        melonToken.mintIcedToken(recipient, oneThirdOf(tokens));
+        dotToken.mintIcedToken(recipient, twoThirdsOf(tokens));
         etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
         assert(melonport.send(msg.value));
         etherIcedContributors[msg.sender] = safeAdd(etherIcedContributors[msg.sender], msg.value);
@@ -224,8 +224,8 @@ contract Contribution is SafeMath {
         liquid_ether_cap_not_reached_or_now_before_min_duration
     {
         uint tokens = safeMul(msg.value, liquidRate()) / DIVISOR_RATE;
-        melonToken.mintLiquidToken(recipient, forMelon(tokens));
-        dotToken.mintLiquidToken(recipient, forDot(tokens));
+        melonToken.mintLiquidToken(recipient, oneThirdOf(tokens));
+        dotToken.mintLiquidToken(recipient, twoThirdsOf(tokens));
         etherRaisedLiquid = safeAdd(etherRaisedLiquid, msg.value);
         assert(melonport.send(msg.value));
         etherLiquidContributors[msg.sender] = safeAdd(etherLiquidContributors[msg.sender], msg.value);
@@ -242,8 +242,8 @@ contract Contribution is SafeMath {
         btcs_ether_cap_not_reached
     {
         uint tokens = safeMul(msg.value, ICED_RATE) / DIVISOR_RATE;
-        melonToken.mintIcedToken(recipient, forMelon(tokens));
-        dotToken.mintIcedToken(recipient, forDot(tokens));
+        melonToken.mintIcedToken(recipient, oneThirdOf(tokens));
+        dotToken.mintIcedToken(recipient, twoThirdsOf(tokens));
         etherRaisedIced = safeAdd(etherRaisedIced, msg.value);
         assert(melonport.send(msg.value));
         IcedTokenBought(recipient, msg.value, tokens);
@@ -256,17 +256,21 @@ contract Contribution is SafeMath {
         excess_company_token_not_burned
     {
         // Calculate differences for melon token allocation to companies
-        uint maxMelonSupply = forMelon(MAX_TOTAL_TOKEN_AMOUNT); // Max melon token amount
+        uint maxMelonSupply = oneThirdOf(MAX_TOTAL_TOKEN_AMOUNT); // Max melon token amount
         uint melonSupply = melonToken.totalSupply(); // Actual melon token amount
+        assert(melonSupply < maxMelonSupply); // Assert that not all melon tokens have been sold
         uint melonExcessAmount = maxMelonSupply - melonSupply; // Difference between the two above
+        // Calculate differences for dot token allocation to companies
+        uint maxDotSupply = twoThirdsOf(MAX_TOTAL_TOKEN_AMOUNT); // Max dot token amount
+        uint dotSupply = dotToken.totalSupply(); // Actual dot token amount
+        assert(dotSupply < maxDotSupply); // Assert that not all dot tokens have been sold
+        uint dotExcessAmount = maxDotSupply - dotSupply; // Diffrence between the two above
+        // Let there be fire
         melonToken.burnCompanyToken(melonport, melonExcessAmount * MELONPORT_STAKE_MELON / DIVISOR_STAKE);
         melonToken.burnCompanyToken(parity, melonExcessAmount * PARITY_STAKE_MELON / DIVISOR_STAKE);
-        // Calculate differences for dot token allocation to companies
-        uint maxDotSupply = forDot(MAX_TOTAL_TOKEN_AMOUNT); // Max dot token amount
-        uint dotSupply = dotToken.totalSupply(); // Actual dot token amount
-        uint dotExcessAmount = maxDotSupply - dotSupply; // Diffrence between the two above
         dotToken.burnCompanyToken(melonport, dotExcessAmount * MELONPORT_STAKE_DOT / DIVISOR_STAKE);
         dotToken.burnCompanyToken(parity, dotExcessAmount * PARITY_STAKE_DOT / DIVISOR_STAKE);
+        excessCompanyTokenBurned = true;
     }
 
     // Pre: Contributor only once, after contribution period if more contributions received than ICED_ETHER_CAP
