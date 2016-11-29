@@ -3,11 +3,6 @@ var assert = require('assert');
 var BigNumber = require('bignumber.js');
 var sha256 = require('js-sha256').sha256;
 
-//Config
-const startTime = 1477958400; // 11/01/2016 @ 12:00am (UTC)
-const SECONDS_PER_WEEK = 604800; // 3600*24*7
-const endTime = startTime + 8*SECONDS_PER_WEEK;
-
 function sign(web3, address, value, callback) {
   web3.eth.sign(address, value, (err, sig) => {
     if (!err) {
@@ -33,6 +28,20 @@ function sign(web3, address, value, callback) {
   });
 }
 
+function send(method, params, callback) {
+  if (typeof params == "function") {
+    callback = params;
+    params = [];
+  }
+
+  web3.currentProvider.sendAsync({
+    jsonrpc: "2.0",
+    method: method,
+    params: params || [],
+    id: new Date().getTime()
+  }, callback);
+};
+
 contract('Contribution', (accounts) => {
   //globals
   let contract;
@@ -49,10 +58,22 @@ contract('Contribution', (accounts) => {
   const signer = accounts[3];
   const FOUNDER_LOCKUP = 2252571;
   const TRANSFER_LOCKUP = 370285;
+  var startTime;
+  const SECONDS_PER_WEEK = 3600*24*7;
+  var endTime;
+  var timeTravelOneYearForward = 52 * SECONDS_PER_WEEK;
 
   before('Check accounts', (done) => {
     assert.equal(accounts.length, 10);
     done();
+  });
+
+  it('Set startTime as now', (done) => {
+    web3.eth.getBlock('latest', function(err, result) {
+      startTime = result.timestamp;
+      endTime = startTime + 8*SECONDS_PER_WEEK;
+      done();
+    });
   });
 
   it('Deploy smart contract', (done) => {
@@ -108,9 +129,10 @@ contract('Contribution', (accounts) => {
       function(testCase, callbackMap) {
         const hash = '0x' + sha256(new Buffer(testCase.account.slice(2),'hex'));
         sign(web3, signer, hash, (err, sig) => {
-          testCase.v = sig.v;
-          testCase.r = sig.r;
-          testCase.s = sig.s;
+          console.log(sig);
+          // testCase.v = sig.v;
+          // testCase.r = sig.r;
+          // testCase.s = sig.s;
           callbackMap(null, testCase);
         });
       },
@@ -121,4 +143,28 @@ contract('Contribution', (accounts) => {
     );
   });
 
+  it('should jump one year', function(done) {
+    // Adjust time
+    send("evm_increaseTime", [timeTravelOneYearForward], function(err, result) {
+      if (err) return done(err);
+
+      // Mine a block so new time is recorded.
+      send("evm_mine", function(err, result) {
+        if (err) return done(err);
+
+        web3.eth.getBlock('latest', function(err, block){
+          if(err) return done(err)
+          var secondsJumped = block.timestamp - startTime
+
+          // Somehow it jumps an extra 18 seconds, ish, when run inside the whole
+          // test suite. It might have something to do with when the before block
+          // runs and when the test runs. Likely the last block didn't occur for
+          // awhile.
+          assert(secondsJumped >= timeTravelOneYearForward)
+          done()
+        })
+      })
+    })
+  });
+  
 });
