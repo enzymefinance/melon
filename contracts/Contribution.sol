@@ -25,13 +25,13 @@ contract Contribution is SafeMath {
     uint public constant MELONPORT_STAKE_DOT = 75; // 0.75% of all created dot token allocated to melonport
     uint public constant PARITY_STAKE_MELON = 300; // 3% of all created melon token minted to "this" contract
     uint public constant PARITY_STAKE_DOT = 1425; // 14.25% of all created dot token minted to "this" contract
-    uint public constant DIVISOR_STAKE = 10**4; // stakes are divided by this number
+    uint public constant DIVISOR_STAKE = 10000; // stakes are divided by this number; results to one basis point
     uint public constant ICED_RATE = 1125; // One iced tier, remains constant for the duration of the contribution
     uint public constant LIQUID_RATE_FIRST = 1075; // Four liquid tiers, each valid for two weeks
     uint public constant LIQUID_RATE_SECOND = 1050;
     uint public constant LIQUID_RATE_THIRD = 1025;
     uint public constant LIQUID_RATE_FOURTH = 1000;
-    uint public constant DIVISOR_RATE = 10**3; // price rates are divided by this number
+    uint public constant DIVISOR_RATE = 1000; // price rates are divided by this number
 
     // Fields that are only changed in constructor
     address public melonport; // All deposited ETH will be instantly forwarded to this address.
