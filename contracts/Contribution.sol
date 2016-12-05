@@ -273,8 +273,8 @@ contract Contribution is SafeMath {
         excessCompanyTokenBurned = true;
     }
 
-    // Pre: Contributor only once, after contribution period if more contributions received than ICED_ETHER_CAP
-    // Post: Refunds the excess amount received proportionally with ether amount contributed by Contributor
+    /// Pre: Contributor only once, after contribution period if more contributions received than ICED_ETHER_CAP
+    /// Post: Refunds the excess amount received proportionally with ether amount contributed by Contributor
     function refund_iced()
         now_past(endTime)
         raised_past_iced_ether_cap
@@ -287,8 +287,8 @@ contract Contribution is SafeMath {
         isRefundedIced[contributor] = true;
     }
 
-    // Pre: Contributor only once, after contribution period if more contributions received than LIQUID_ETHER_CAP
-    // Post: Refunds the excess amount received proportionally with ether amount contributed by Contributor
+    /// Pre: Contributor only once, after contribution period if more contributions received than LIQUID_ETHER_CAP
+    /// Post: Refunds the excess amount received proportionally with ether amount contributed by Contributor
     function refund_liquid()
         now_past(endTime)
         raised_past_liquid_ether_cap

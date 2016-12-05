@@ -48,8 +48,8 @@ contract MelonToken is ERC20, SafeMath {
         endTime = endTimeInput;
     }
 
-    // Pre: Address of Contribution contract (creator) is known
-    // Post: Mints Token into liquid tranche
+    /// Pre: Address of Contribution contract (creator) is known
+    /// Post: Mints Token into liquid tranche
     function mintLiquidToken(address recipient, uint tokens)
         external
         only_creator
@@ -58,8 +58,8 @@ contract MelonToken is ERC20, SafeMath {
         totalSupply = safeAdd(totalSupply, tokens);
     }
 
-    // Pre: Address of Contribution contract (creator) is known
-    // Post: Mints Token into iced tranche. They will become liquid once the Genesis block has been launched
+    /// Pre: Address of Contribution contract (creator) is known
+    /// Post: Mints Token into iced tranche. They will become liquid once the Genesis block has been launched
     function mintIcedToken(address recipient, uint tokens)
         external
         only_creator
@@ -68,8 +68,8 @@ contract MelonToken is ERC20, SafeMath {
         totalSupply = safeAdd(totalSupply, tokens);
     }
 
-    // Pre: Address of Contribution contract (creator) is known
-    // Post: Creator transfers all its tokens to owner address, only once possible
+    /// Pre: Address of Contribution contract (creator) is known
+    /// Post: Creator transfers all its tokens to owner address, only once possible
     function burnCompanyToken(address owner, uint tokens)
         external
         only_creator
@@ -78,8 +78,8 @@ contract MelonToken is ERC20, SafeMath {
         totalSupply = safeSub(totalSupply, tokens);
     }
 
-    // Pre: Thawing period has passed - iced funds have turned into liquid ones
-    // Post: All funds available for trade
+    /// Pre: Thawing period has passed - iced funds have turned into liquid ones
+    /// Post: All funds available for trade
     function unlockBalance(address _who)
         now_past(endTime + 2 years)
     {
