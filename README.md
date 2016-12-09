@@ -1,3 +1,5 @@
+<img src = "https://github.com/melonproject/branding/blob/master/facebook/Facebook%20cover%20blue%20on%20white.png" width = "100%">
+
 # melon
 
 Token contracts of the melon protocol contribution.
@@ -30,7 +32,21 @@ After installation is complete, go to the above `melon` directory, open a termin
     ```
     node_modules/.bin/truffle test
     ```
+    
+## Deployment
 
+After installation is complete, go to the above `protocol` directory, open a terminal and:
+
+1. Launch a ethereum client. For example something similar to this:
+    ```
+    parity --chain ropsten --author <some address> --unlock <some address> --password <some password file>
+    ```
+
+2. Open a second terminal and deploy contracts using truffle
+    ```
+    truffle migrate
+    ```
+    
 ## Acknowledgements
 
 These token contracts have been influenced by the work of [FirstBlood](https://github.com/Firstbloodio/token).
