@@ -49,19 +49,18 @@ contract('Contribution', (accounts) => {
   const weeks = 3600*24*7;
   const ether = new BigNumber(Math.pow(10,18));
 
-  // Contract constants
-  const ETHER_CAP = 1800000 * ether; // max amount raised during contribution
-  const MIN_CONTRIBUTION_DURATION = 1 * hours; // min amount in seconds of contribution period
-  const MAX_CONTRIBUTION_DURATION = 8 * weeks; // max amount in seconds of contribution period
-  const MAX_TOTAL_TOKEN_AMOUNT = 1971000; // max amount of total tokens raised during contribution
-  const ICED_ETHER_CAP = ETHER_CAP * 40 / 100 ; // iced means untradeable untill genesis blk or two years
-  const LIQUID_ETHER_CAP = ETHER_CAP * 60 / 100; // liquid means tradeable
+  // Constant fields
+  const ETHER_CAP = 250000 * ether; // max amount raised during contribution
+  const MAX_CONTRIBUTION_DURATION = 4 * weeks; // max amount in seconds of contribution period
+  const MAX_TOTAL_TOKEN_AMOUNT = 1250000; // max amount of total tokens raised during contribution
+  const LIQUID_ETHER_CAP = ETHER_CAP * 100 / 100; // liquid means tradeable
   const BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
-  const MELONPORT_STAKE_MELON = 1200; // 12% of all created melon token allocated to melonport
-  const MELONPORT_STAKE_DOT = 75; // 0.75% of all created dot token allocated to melonport
-  const PARITY_STAKE_MELON = 300; // 3% of all created melon token minted to "this" contract
-  const PARITY_STAKE_DOT = 1425; // 14.25% of all created dot token minted to "this" contract
-  const DIVISOR_STAKE = 10000; // stakes are divided by this number
+  const FOUNDER_STAKE = 450; // 4.5% of all created melon token allocated to melonport
+  const EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon token allocated to melonport
+  const EXT_COMPANY_STAKE_TWO = 100; // 3% of all created melon token allocated to melonport
+  const ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon token allocated to melonport
+  const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon token allocated to melonport
+  const DIVISOR_STAKE = 10000; // stakes are divided by this number; results to one basis point
   const ICED_RATE = 1125; // One iced tier, remains constant for the duration of the contribution
   const LIQUID_RATE_FIRST = 1075; // Four liquid tiers, each valid for two weeks
   const LIQUID_RATE_SECOND = 1050;
@@ -69,23 +68,18 @@ contract('Contribution', (accounts) => {
   const LIQUID_RATE_FOURTH = 1000;
   const DIVISOR_RATE = 1000; // price rates are divided by this number
 
-  //globals
+  // Test globals
   let contributionContract;
   let melonContract;
-  let dotContract;
-  let contributionContractAddress;
   let testCases;
 
   const melonport = accounts[0];
-  const parity = accounts[1];
-  const btcs = accounts[2];
-  const signer = accounts[3];
+  const btcs = accounts[1];
+  const signer = accounts[2];
 
-  const FOUNDER_LOCKUP = 2252571;
-  const TRANSFER_LOCKUP = 370285;
   var startTime;
   var endTime;
-  var timeTravelOneYearForward = 52 * weeks;
+  var timeTravelTwoYearForward = 2 * 52 * weeks;
 
   before('Check accounts', (done) => {
     assert.equal(accounts.length, 10);
@@ -95,7 +89,7 @@ contract('Contribution', (accounts) => {
   it('Set startTime as now', (done) => {
     web3.eth.getBlock('latest', function(err, result) {
       startTime = result.timestamp;
-      endTime = startTime + 8*weeks;
+      endTime = startTime + 4*weeks;
       done();
     });
   });
@@ -106,18 +100,18 @@ contract('Contribution', (accounts) => {
     for (i = 0; i < numBlocks; i++) {
       const blockNumber = Math.round(startTime + (endTime-startTime)*i/(numBlocks-1));
       let expectedPrice;
-      if (blockNumber>=startTime && blockNumber<startTime + 2*weeks) {
+      if (blockNumber>=startTime && blockNumber<startTime + 1*weeks) {
         expectedPrice = 1075;
-      } else if (blockNumber>=startTime + 2*weeks && blockNumber < startTime + 4*weeks) {
+      } else if (blockNumber>=startTime + 1*weeks && blockNumber < startTime + 2*weeks) {
         expectedPrice = 1050;
-      } else if (blockNumber>=startTime + 4*weeks && blockNumber < startTime + 6*weeks) {
+      } else if (blockNumber>=startTime + 2*weeks && blockNumber < startTime + 3*weeks) {
         expectedPrice = 1025;
-      } else if (blockNumber>=startTime + 6*weeks && blockNumber < startTime + 8*weeks) {
+      } else if (blockNumber>=startTime + 3*weeks && blockNumber < endTime) {
         expectedPrice = 1000;
       } else {
         expectedPrice = 0;
       }
-      const accountNum = Math.max(1,Math.min(i+1, accounts.length-1));
+      const accountNum = Math.max(1, Math.min(i + 1, accounts.length-1));
       const account = accounts[accountNum];
       expectedPrice = Math.round(expectedPrice);
       testCases.push(
@@ -152,31 +146,22 @@ contract('Contribution', (accounts) => {
   });
 
   it('Deploy smart contracts', (done) => {
-    Contribution.new(melonport, parity, btcs, signer, startTime).then((result) => {
+    Contribution.new(melonport, btcs, signer, startTime).then((result) => {
       contributionContract = result;
-      contributionContractAddress = contributionContract.address;
       return contributionContract.melonToken();
     }).then((result) => {
       melonContract = MelonToken.at(result);
       return melonContract.creator()
     }).then((result) => {
-      return contributionContract.dotToken();
-    }).then((result) => {
-      dotContract = DotToken.at(result);
+      assert.equal(result, contributionContract.address);
       done();
     });
   });
 
-  it('Check locked melon and dot token and allocation to companies', (done) => {
-    melonContract.lockedBalanceOf(melonport).then((result) => {
+  it('Check premined allocation', (done) => {
+    melonContract.lockedBalanceOf('0xF1').then((result) => {
       console.log(result.toNumber());
-      return melonContract.lockedBalanceOf(parity);
-    }).then((result) => {
-      console.log(result.toNumber());
-      return dotContract.lockedBalanceOf(melonport);
-    }).then((result) => {
-      console.log(result.toNumber());
-      return dotContract.lockedBalanceOf(parity);
+      return melonContract.lockedBalanceOf('0xF2');
     }).then((result) => {
       console.log(result.toNumber());
       done();
@@ -185,7 +170,7 @@ contract('Contribution', (accounts) => {
 
   it('Time travel one year forward', function(done) {
     // Adjust time
-    send("evm_increaseTime", [timeTravelOneYearForward], (err, result) => {
+    send("evm_increaseTime", [timeTravelTwoYearForward], (err, result) => {
       if (err) return done(err);
 
       // Mine a block so new time is recorded.
@@ -200,7 +185,7 @@ contract('Contribution', (accounts) => {
           // test suite. It might have something to do with when the before block
           // runs and when the test runs. Likely the last block didn't occur for
           // awhile.
-          assert(secondsJumped >= timeTravelOneYearForward)
+          assert(secondsJumped >= timeTravelTwoYearForward)
           done()
         })
       })

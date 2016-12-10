@@ -68,16 +68,6 @@ contract MelonToken is ERC20, SafeMath {
         totalSupply = safeAdd(totalSupply, tokens);
     }
 
-    /// Pre: Address of Contribution contract (creator) is known
-    /// Post: Creator transfers all its tokens to owner address, only once possible
-    function burnCompanyToken(address owner, uint tokens)
-        external
-        only_creator
-    {
-        lockedBalances[owner] = safeSub(lockedBalances[owner], tokens);
-        totalSupply = safeSub(totalSupply, tokens);
-    }
-
     /// Pre: Thawing period has passed - iced funds have turned into liquid ones
     /// Post: All funds available for trade
     function unlockBalance(address _who)
