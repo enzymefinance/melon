@@ -151,7 +151,7 @@ contract('Contribution', (accounts) => {
       return contributionContract.melonToken();
     }).then((result) => {
       melonContract = MelonToken.at(result);
-      return melonContract.creator()
+      return melonContract.minter()
     }).then((result) => {
       assert.equal(result, contributionContract.address);
       done();

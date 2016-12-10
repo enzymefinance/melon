@@ -15,14 +15,14 @@ contract Contribution is SafeMath {
     // Constant fields
     uint public constant ETHER_CAP = 250000 ether; // max amount raised during contribution
     uint public constant MAX_CONTRIBUTION_DURATION = 4 weeks; // max amount in seconds of contribution period
-    uint public constant MAX_TOTAL_TOKEN_AMOUNT = 1250000; // max amount of total tokens raised during contribution
+    uint public constant MAX_TOTAL_TOKEN_AMOUNT = 1250000; // max amount of total tokens raised during all contributions
     uint public constant LIQUID_ETHER_CAP = ETHER_CAP * 100 / 100; // liquid means tradeable
     uint public constant BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
-    uint public constant FOUNDER_STAKE = 450; // 4.5% of all created melon token allocated to melonport
-    uint public constant EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon token allocated to melonport
-    uint public constant EXT_COMPANY_STAKE_TWO = 100; // 3% of all created melon token allocated to melonport
-    uint public constant ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon token allocated to melonport
-    uint public constant ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon token allocated to melonport
+    uint public constant FOUNDER_STAKE = 450; // 4.5% of all created melon token allocated to founder
+    uint public constant EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon token allocated to external company
+    uint public constant EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon token allocated to external company
+    uint public constant ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon token allocated to advisor
+    uint public constant ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon token allocated to advisor
     uint public constant DIVISOR_STAKE = 10000; // stakes are divided by this number; results to one basis point
     uint public constant ICED_RATE = 1125; // One iced tier, remains constant for the duration of the contribution
     uint public constant LIQUID_RATE_FIRST = 1075; // Four liquid tiers, each valid for two weeks
@@ -38,7 +38,7 @@ contract Contribution is SafeMath {
     uint public startTime; // contribution start time in seconds
     uint public minDurationTime; // contribution minimum duration in seconds
     uint public endTime; // contribution end time in seconds
-    MelonToken public melonToken; // Contract of the ERC20 compliant MLN
+    MelonToken public melonToken; // Contract of the ERC20 compliant melon token
 
     // Fields that can be changed by functions
     uint public etherRaisedLiquid; // this will keep track of the Ether raised for the liquid tranche during the contribution
@@ -116,7 +116,7 @@ contract Contribution is SafeMath {
 
     // NON-CONSTANT METHODS
 
-    /// Pre: ALL fields, except { melonport, btcs, signer, startTime } are valid
+    /// Pre: All fields, except { melonport, btcs, signer, startTime } are valid
     /// Post: All fields, including { melonport, btcs, signer, startTime } are valid
     function Contribution(address setMelonport, address setBTCS, address setSigner, uint setStartTime) {
         melonport = setMelonport;
@@ -124,8 +124,8 @@ contract Contribution is SafeMath {
         signer = setSigner;
         startTime = setStartTime;
         endTime = startTime + MAX_CONTRIBUTION_DURATION;
-        melonToken = new MelonToken(this, startTime, endTime); // Create Melon Token Contract
-        // Mint token and allocate stakes
+        melonToken = new MelonToken(this, melonport,startTime, endTime); // Create Melon Token Contract
+        // Mint tokens that are unable to tradde for two years and allocate according to relevant stakes
         uint maxMelonSupply = MAX_TOTAL_TOKEN_AMOUNT;
         melonToken.mintIcedToken(0xF1, maxMelonSupply * FOUNDER_STAKE / DIVISOR_STAKE);
         melonToken.mintIcedToken(0xF2, maxMelonSupply * FOUNDER_STAKE / DIVISOR_STAKE);
@@ -136,11 +136,11 @@ contract Contribution is SafeMath {
     }
 
     /// Pre: Valid signature received from https://contribution.melonport.com
-    /// Post: Bought melon tokens of liquid tranche accoriding to liquidRate() and msg.value
+    /// Post: Bought melon tokens of liquid tranche according to liquidRate() and msg.value
     function buyLiquid(uint8 v, bytes32 r, bytes32 s) payable { buyLiquidRecipient(msg.sender, v, r, s); }
 
     /// Pre: Valid signature received from https://contribution.melonport.com
-    /// Post: Bought melon tokens of liquid tranche accoriding to liquidRate() and msg.value on behlf of recipient
+    /// Post: Bought melon tokens of liquid tranche according to liquidRate() and msg.value on behlf of recipient
     function buyLiquidRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer(v, r, s)
@@ -157,7 +157,7 @@ contract Contribution is SafeMath {
     }
 
     /// Pre: BTCS before contribution period, BTCS has exclusiv right to buy up to 25% of all tokens
-    /// Post: Bought melon tokens of liquid tranche accoriding to ICED_RATE and msg.value on behalf of recipient
+    /// Post: Bought melon tokens of liquid tranche according to liquidRate() and msg.value on behalf of recipient
     function btcsBuyLiquidRecipient(address recipient)
         payable
         only_btcs
@@ -172,9 +172,15 @@ contract Contribution is SafeMath {
         LiquidTokenBought(recipient, msg.value, tokens);
     }
 
+    /// Pre: Emergency situation that requires contribution period to stop.
+    /// Post: Contributing not possible anymore.
     function halt() only_melonport { halted = true; }
 
+    /// Pre: Emergency situation resolved.
+    /// Post: Contributing becomes possible again withing the outlined restrictions.
     function unhalt() only_melonport { halted = false; }
 
+    /// Pre: Restricted to melonport.
+    /// Post: New address set. To halt contribution and/or change minter in MelonToken contract.
     function changeMelonportAddress(address newAddress) only_melonport { melonport = newAddress; }
 }
