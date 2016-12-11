@@ -35,7 +35,7 @@ After installation is complete, go to the above `melon` directory, open a termin
     
 ## Deployment
 
-After installation is complete, go to the above `protocol` directory, open a terminal and:
+After installation is complete, go to the above `melon` directory, open a terminal and:
 
 1. Launch a ethereum client. For example something similar to this:
     ```
