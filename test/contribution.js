@@ -52,20 +52,20 @@ contract('Contribution', (accounts) => {
   // Constant fields
   const ETHER_CAP = 250000 * ether; // max amount raised during contribution
   const MAX_CONTRIBUTION_DURATION = 4 * weeks; // max amount in seconds of contribution period
-  const MAX_TOTAL_TOKEN_AMOUNT = 1250000; // max amount of total tokens raised during contribution
+  const MAX_TOTAL_VOUCHER_AMOUNT = 1250000; // max amount of total vouchers raised during contribution
   const LIQUID_ETHER_CAP = ETHER_CAP * 100 / 100; // liquid means tradeable
   const BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
-  const FOUNDER_STAKE = 450; // 4.5% of all created melon token allocated to melonport
-  const EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon token allocated to melonport
-  const EXT_COMPANY_STAKE_TWO = 100; // 3% of all created melon token allocated to melonport
-  const ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon token allocated to melonport
-  const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon token allocated to melonport
+  const FOUNDER_STAKE = 450; // 4.5% of all created melon voucher allocated to melonport
+  const EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon voucher allocated to melonport
+  const EXT_COMPANY_STAKE_TWO = 100; // 3% of all created melon voucher allocated to melonport
+  const ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon voucher allocated to melonport
+  const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon voucher allocated to melonport
   const DIVISOR_STAKE = 10000; // stakes are divided by this number; results to one basis point
   const ICED_RATE = 1125; // One iced tier, remains constant for the duration of the contribution
-  const LIQUID_RATE_FIRST = 1075; // Four liquid tiers, each valid for two weeks
-  const LIQUID_RATE_SECOND = 1050;
-  const LIQUID_RATE_THIRD = 1025;
-  const LIQUID_RATE_FOURTH = 1000;
+  const LIQUID_RATE_FIRST = 2000; // Four liquid tiers, each valid for two weeks
+  const LIQUID_RATE_SECOND = 1950;
+  const LIQUID_RATE_THIRD = 1900;
+  const LIQUID_RATE_FOURTH = 1850;
   const DIVISOR_RATE = 1000; // price rates are divided by this number
 
   // Test globals
@@ -101,13 +101,13 @@ contract('Contribution', (accounts) => {
       const blockNumber = Math.round(startTime + (endTime-startTime)*i/(numBlocks-1));
       let expectedPrice;
       if (blockNumber>=startTime && blockNumber<startTime + 1*weeks) {
-        expectedPrice = 1075;
+        expectedPrice = 2000;
       } else if (blockNumber>=startTime + 1*weeks && blockNumber < startTime + 2*weeks) {
-        expectedPrice = 1050;
+        expectedPrice = 1950;
       } else if (blockNumber>=startTime + 2*weeks && blockNumber < startTime + 3*weeks) {
-        expectedPrice = 1025;
+        expectedPrice = 1900;
       } else if (blockNumber>=startTime + 3*weeks && blockNumber < endTime) {
-        expectedPrice = 1000;
+        expectedPrice = 1850;
       } else {
         expectedPrice = 0;
       }
@@ -148,9 +148,9 @@ contract('Contribution', (accounts) => {
   it('Deploy smart contracts', (done) => {
     Contribution.new(melonport, btcs, signer, startTime).then((result) => {
       contributionContract = result;
-      return contributionContract.melonToken();
+      return contributionContract.melonVoucher();
     }).then((result) => {
-      melonContract = MelonToken.at(result);
+      melonContract = MelonVoucher.at(result);
       return melonContract.minter()
     }).then((result) => {
       assert.equal(result, contributionContract.address);

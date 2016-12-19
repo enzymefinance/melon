@@ -2,7 +2,7 @@
 
 # melon
 
-Token contracts of the melon protocol contribution.
+Token contracts of the Melon contribution.
 
 [![Slack Status](http://chat.melonport.com/badge.svg)](http://chat.melonport.com) [![Gitter](https://badges.gitter.im/melonproject/general.svg)](https://gitter.im/melonproject/general?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
@@ -32,7 +32,7 @@ After installation is complete, go to the above `melon` directory, open a termin
     ```
     node_modules/.bin/truffle test
     ```
-    
+
 ## Deployment
 
 After installation is complete, go to the above `melon` directory, open a terminal and:
@@ -46,7 +46,7 @@ After installation is complete, go to the above `melon` directory, open a termin
     ```
     truffle migrate
     ```
-    
+
 ## Acknowledgements
 
 These token contracts have been influenced by the work of [FirstBlood](https://github.com/Firstbloodio/token).
