@@ -13,14 +13,15 @@ contract Contribution is SafeMath {
     // FILEDS
 
     // Constant fields
-    uint public constant ETHER_CAP = 250000 ether; // max amount raised during contribution
+    uint public constant ETHER_CAP = 250000 ether; // max amount raised during this contribution; targeted amount CHF 2.5MN
     uint public constant MAX_CONTRIBUTION_DURATION = 4 weeks; // max amount in seconds of contribution period
     uint public constant MAX_TOTAL_VOUCHER_AMOUNT = 1250000; // max amount of total vouchers raised during all contributions
-    uint public constant LIQUID_ETHER_CAP = ETHER_CAP * 100 / 100; // liquid means tradeable
+    uint public constant LIQUID_ETHER_CAP = ETHER_CAP; // liquid means tradeable
     uint public constant BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
-    uint public constant FOUNDER_STAKE = 450; // 4.5% of all created melon voucher allocated to founder
+    uint public constant MELONPORT_COMPANY_STAKE = 1000; // 12% of all created melon voucher allocated to melonport company
     uint public constant EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon voucher allocated to external company
     uint public constant EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon voucher allocated to external company
+    uint public constant FOUNDER_STAKE = 450; // 4.5% of all created melon voucher allocated to founder
     uint public constant ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon voucher allocated to advisor
     uint public constant ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon voucher allocated to advisor
     uint public constant DIVISOR_STAKE = 10000; // stakes are divided by this number; results to one basis point
@@ -125,14 +126,15 @@ contract Contribution is SafeMath {
         startTime = setStartTime;
         endTime = startTime + MAX_CONTRIBUTION_DURATION;
         melonVoucher = new MelonVoucher(this, melonport,startTime, endTime); // Create Melon Voucher Contract
-        // Mint vouchers that are unable to tradde for two years and allocate according to relevant stakes
-        uint maxMelonSupply = MAX_TOTAL_VOUCHER_AMOUNT;
-        melonVoucher.mintIcedVoucher(0xF1, maxMelonSupply * FOUNDER_STAKE / DIVISOR_STAKE);
-        melonVoucher.mintIcedVoucher(0xF2, maxMelonSupply * FOUNDER_STAKE / DIVISOR_STAKE);
-        melonVoucher.mintIcedVoucher(0xC1, maxMelonSupply * EXT_COMPANY_STAKE_ONE / DIVISOR_STAKE);
-        melonVoucher.mintIcedVoucher(0xC2, maxMelonSupply * EXT_COMPANY_STAKE_TWO / DIVISOR_STAKE);
-        melonVoucher.mintIcedVoucher(0xA1, maxMelonSupply * ADVISOR_STAKE_ONE / DIVISOR_STAKE);
-        melonVoucher.mintIcedVoucher(0xA2, maxMelonSupply * ADVISOR_STAKE_TWO / DIVISOR_STAKE);
+        // Mint liquid vouchers for melonport company
+        melonVoucher.mintLiquidVoucher(melonport, MAX_TOTAL_VOUCHER_AMOUNT * MELONPORT_COMPANY_STAKE / DIVISOR_STAKE);
+        // Mint iced vouchers that are unable to trade for two years and allocate according to relevant stakes
+        melonVoucher.mintIcedVoucher(0xF1, MAX_TOTAL_VOUCHER_AMOUNT * FOUNDER_STAKE / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(0xF2, MAX_TOTAL_VOUCHER_AMOUNT * FOUNDER_STAKE / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(0xC1, MAX_TOTAL_VOUCHER_AMOUNT * EXT_COMPANY_STAKE_ONE / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(0xC2, MAX_TOTAL_VOUCHER_AMOUNT * EXT_COMPANY_STAKE_TWO / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(0xA1, MAX_TOTAL_VOUCHER_AMOUNT * ADVISOR_STAKE_ONE / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(0xA2, MAX_TOTAL_VOUCHER_AMOUNT * ADVISOR_STAKE_TWO / DIVISOR_STAKE);
     }
 
     /// Pre: Valid signature received from https://contribution.melonport.com
