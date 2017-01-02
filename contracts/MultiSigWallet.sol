@@ -1,9 +1,11 @@
 pragma solidity ^0.4.4;
 
+import "./dependencies/SafeMath.sol";
 
 /// @title Multisignature wallet - Allows multiple parties to agree on transactions before execution.
-/// @author Stefan George - <stefan.george@consensys.net>
-contract MultiSigWallet {
+/// @author Melonport AG <team@melonport.com>
+/// @notice Inspired by Stefan George - <stefan.george@consensys.net>
+contract MultiSigWallet is SafeMath {
 
     event Confirmation(address sender, bytes32 transactionHash);
     event Revocation(address sender, bytes32 transactionHash);
@@ -12,14 +14,14 @@ contract MultiSigWallet {
     event Deposit(address sender, uint value);
     event OwnerAddition(address owner);
     event OwnerRemoval(address owner);
-    event RequiredUpdate(uint required);
+    event RequiredUpdate(uint requiredSignatures);
 
     mapping (bytes32 => Transaction) public transactions;
     mapping (bytes32 => mapping (address => bool)) public confirmations;
     mapping (address => bool) public isOwner;
     address[] owners;
     bytes32[] transactionList;
-    uint public required;
+    uint public requiredSignatures;
 
     struct Transaction {
         address destination;
@@ -29,67 +31,59 @@ contract MultiSigWallet {
         bool executed;
     }
 
-    modifier onlyWallet() {
-        if (msg.sender != address(this))
-            throw;
+    modifier only_wallet {
+        assert(msg.sender == address(this));
         _;
     }
 
-    modifier signaturesFromOwners(bytes32 transactionHash, uint8[] v, bytes32[] rs) {
-        for (uint i=0; i<v.length; i++)
-            if (!isOwner[ecrecover(transactionHash, v[i], rs[i], rs[v.length + i])])
-                throw;
+    modifier is_owners_signature(bytes32 transactionHash, uint8[] v, bytes32[] rs) {
+        for (uint i = 0; i < v.length; i++)
+            assert(isOwner[ecrecover(transactionHash, v[i], rs[i], rs[v.length + i])]);
         _;
     }
 
-    modifier ownerDoesNotExist(address owner) {
-        if (isOwner[owner])
-            throw;
+    modifier is_owner(address owner) {
+        assert(isOwner[owner]);
         _;
     }
 
-    modifier ownerExists(address owner) {
-        if (!isOwner[owner])
-            throw;
+    modifier is_not_owner(address owner) {
+        assert(!isOwner[owner]);
         _;
     }
 
-    modifier confirmed(bytes32 transactionHash, address owner) {
-        if (!confirmations[transactionHash][owner])
-            throw;
+    modifier is_confirmed(bytes32 transactionHash, address owner) {
+        assert(confirmations[transactionHash][owner]);
         _;
     }
 
-    modifier notConfirmed(bytes32 transactionHash, address owner) {
-        if (confirmations[transactionHash][owner])
-            throw;
+    modifier is_not_confirmed(bytes32 transactionHash, address owner) {
+        assert(!confirmations[transactionHash][owner]);
         _;
     }
 
-    modifier notExecuted(bytes32 transactionHash) {
-        if (transactions[transactionHash].executed)
-            throw;
+    modifier is_not_executed(bytes32 transactionHash) {
+        assert(!transactions[transactionHash].executed);
         _;
     }
 
-    modifier notNull(address destination) {
-        if (destination == 0)
-            throw;
+    modifier address_not_null(address destination) {
+        //TODO: Test empty input
+        assert(destination != 0);
         _;
     }
 
-    modifier validRequired(uint _ownerCount, uint _required) {
-        if (   _required > _ownerCount
-            || _required == 0
-            || _ownerCount == 0)
-            throw;
+    modifier valid_amount_of_required_signatures(uint ownerCount, uint required) {
+        assert(ownerCount != 0);
+        assert(required != 0);
+        assert(required <= ownerCount);
         _;
     }
 
     function addOwner(address owner)
         external
-        onlyWallet
-        ownerDoesNotExist(owner)
+        only_wallet
+        is_not_owner(owner)
     {
         isOwner[owner] = true;
         owners.push(owner);
@@ -98,33 +92,33 @@ contract MultiSigWallet {
 
     function removeOwner(address owner)
         external
-        onlyWallet
-        ownerExists(owner)
+        only_wallet
+        is_owner(owner)
     {
         isOwner[owner] = false;
-        for (uint i=0; i<owners.length - 1; i++)
+        for (uint i = 0; i < owners.length - 1; i++)
             if (owners[i] == owner) {
                 owners[i] = owners[owners.length - 1];
                 break;
             }
         owners.length -= 1;
-        if (required > owners.length)
-            updateRequired(owners.length);
+        if (requiredSignatures > owners.length)
+            updateRequiredSignatures(owners.length);
         OwnerRemoval(owner);
     }
 
-    function updateRequired(uint _required)
+    function updateRequiredSignatures(uint required)
         public
-        onlyWallet
-        validRequired(owners.length, _required)
+        only_wallet
+        valid_amount_of_required_signatures(owners.length, required)
     {
-        required = _required;
-        RequiredUpdate(_required);
+        requiredSignatures = required;
+        RequiredUpdate(requiredSignatures);
     }
 
     function addTransaction(address destination, uint value, bytes data, uint nonce)
         private
-        notNull(destination)
+        address_not_null(destination)
         returns (bytes32 transactionHash)
     {
         transactionHash = sha3(destination, value, data, nonce);
@@ -159,7 +153,7 @@ contract MultiSigWallet {
 
     function addConfirmation(bytes32 transactionHash, address owner)
         private
-        notConfirmed(transactionHash, owner)
+        is_not_confirmed(transactionHash, owner)
     {
         confirmations[transactionHash][owner] = true;
         Confirmation(owner, transactionHash);
@@ -167,7 +161,7 @@ contract MultiSigWallet {
 
     function confirmTransaction(bytes32 transactionHash)
         public
-        ownerExists(msg.sender)
+        is_owner(msg.sender)
     {
         addConfirmation(transactionHash, msg.sender);
         executeTransaction(transactionHash);
@@ -175,7 +169,7 @@ contract MultiSigWallet {
 
     function confirmTransactionWithSignatures(bytes32 transactionHash, uint8[] v, bytes32[] rs)
         public
-        signaturesFromOwners(transactionHash, v, rs)
+        is_owners_signature(transactionHash, v, rs)
     {
         for (uint i=0; i<v.length; i++)
             addConfirmation(transactionHash, ecrecover(transactionHash, v[i], rs[i], rs[i + v.length]));
@@ -184,7 +178,7 @@ contract MultiSigWallet {
 
     function executeTransaction(bytes32 transactionHash)
         public
-        notExecuted(transactionHash)
+        is_not_executed(transactionHash)
     {
         if (isConfirmed(transactionHash)) {
             Transaction tx = transactions[transactionHash];
@@ -197,21 +191,21 @@ contract MultiSigWallet {
 
     function revokeConfirmation(bytes32 transactionHash)
         external
-        ownerExists(msg.sender)
-        confirmed(transactionHash, msg.sender)
-        notExecuted(transactionHash)
+        is_owner(msg.sender)
+        is_confirmed(transactionHash, msg.sender)
+        is_not_executed(transactionHash)
     {
         confirmations[transactionHash][msg.sender] = false;
         Revocation(msg.sender, transactionHash);
     }
 
-    function MultiSigWallet(address[] _owners, uint _required)
-        validRequired(_owners.length, _required)
+    function MultiSigWallet(address[] _owners, uint required)
+        valid_amount_of_required_signatures(_owners.length, required)
     {
         for (uint i=0; i<_owners.length; i++)
             isOwner[_owners[i]] = true;
         owners = _owners;
-        required = _required;
+        requiredSignatures = required;
     }
 
     function()
@@ -230,7 +224,7 @@ contract MultiSigWallet {
         for (uint i=0; i<owners.length; i++)
             if (confirmations[transactionHash][owners[i]])
                 count += 1;
-            if (count == required)
+            if (count == requiredSignatures)
                 return true;
     }
 

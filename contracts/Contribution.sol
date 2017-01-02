@@ -51,7 +51,7 @@ contract Contribution is SafeMath {
 
     // MODIFIERS
 
-    modifier is_signer(uint8 v, bytes32 r, bytes32 s) {
+    modifier is_signer_signature(uint8 v, bytes32 r, bytes32 s) {
         bytes32 hash = sha256(msg.sender);
         assert(ecrecover(hash,v,r,s) == signer);
         _;
@@ -145,7 +145,7 @@ contract Contribution is SafeMath {
     /// Post: Bought melon vouchers of liquid tranche according to liquidRate() and msg.value on behlf of recipient
     function buyLiquidRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
-        is_signer(v, r, s)
+        is_signer_signature(v, r, s)
         now_at_least(startTime)
         now_at_most(endTime)
         is_not_halted
