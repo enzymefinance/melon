@@ -146,7 +146,7 @@ contract MultiSigWallet is SafeMath {
     {
         bytes32[] memory _transactionListTemp = new bytes32[](transactionList.length);
         uint count = 0;
-        for (uint i=0; i<transactionList.length; i++)
+        for (uint i = 0; i < transactionList.length; i++)
             if (   isPending && !transactions[transactionList[i]].executed
                 || !isPending && transactions[transactionList[i]].executed)
             {
@@ -154,7 +154,7 @@ contract MultiSigWallet is SafeMath {
                 count += 1;
             }
         _transactionList = new bytes32[](count);
-        for (i=0; i<count; i++)
+        for (i = 0; i < count; i++)
             if (_transactionListTemp[i] > 0)
                 _transactionList[i] = _transactionListTemp[i];
     }
