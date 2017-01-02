@@ -7,6 +7,28 @@ import "./dependencies/SafeMath.sol";
 /// @notice Inspired by Stefan George - <stefan.george@consensys.net>
 contract MultiSigWallet is SafeMath {
 
+    // TYPES
+
+    struct Transaction {
+        address destination;
+        uint value;
+        bytes data;
+        uint nonce;
+        bool executed;
+    }
+
+    // FILEDS
+
+    // Fields that can be changed by functions
+    mapping (bytes32 => Transaction) public transactions;
+    mapping (bytes32 => mapping (address => bool)) public confirmations;
+    mapping (address => bool) public isOwner;
+    address[] owners;
+    bytes32[] transactionList;
+    uint public requiredSignatures;
+
+    // EVENTS
+
     event Confirmation(address sender, bytes32 transactionHash);
     event Revocation(address sender, bytes32 transactionHash);
     event Submission(bytes32 transactionHash);
@@ -16,20 +38,7 @@ contract MultiSigWallet is SafeMath {
     event OwnerRemoval(address owner);
     event RequiredUpdate(uint requiredSignatures);
 
-    mapping (bytes32 => Transaction) public transactions;
-    mapping (bytes32 => mapping (address => bool)) public confirmations;
-    mapping (address => bool) public isOwner;
-    address[] owners;
-    bytes32[] transactionList;
-    uint public requiredSignatures;
-
-    struct Transaction {
-        address destination;
-        uint value;
-        bytes data;
-        uint nonce;
-        bool executed;
-    }
+    // MODIFIERS
 
     modifier only_wallet {
         assert(msg.sender == address(this));
@@ -80,6 +89,84 @@ contract MultiSigWallet is SafeMath {
         _;
     }
 
+    // CONSTANT METHODS
+
+    function isConfirmed(bytes32 transactionHash)
+        constant
+        returns (bool)
+    {
+        uint count = 0;
+        for (uint i = 0; i < owners.length; i++)
+            if (confirmations[transactionHash][owners[i]])
+                count += 1;
+            if (count == requiredSignatures)
+                return true;
+    }
+
+    function confirmationCount(bytes32 transactionHash)
+        external
+        constant
+        returns (uint count)
+    {
+        for (uint i=0; i<owners.length; i++)
+            if (confirmations[transactionHash][owners[i]])
+                count += 1;
+    }
+
+    function getPendingTransactions() external constant returns (bytes32[]) { return filterTransactions(true); }
+
+    function getExecutedTransactions() external constant returns (bytes32[]) { return filterTransactions(false); }
+
+    // NON-CONSTANT INTERNAL METHODS
+
+    function addTransaction(address destination, uint value, bytes data, uint nonce)
+        private
+        address_not_null(destination)
+        returns (bytes32 transactionHash)
+    {
+        transactionHash = sha3(destination, value, data, nonce);
+        if (transactions[transactionHash].destination == 0) {
+            transactions[transactionHash] = Transaction({
+                destination: destination,
+                value: value,
+                data: data,
+                nonce: nonce,
+                executed: false
+            });
+            transactionList.push(transactionHash);
+            Submission(transactionHash);
+        }
+    }
+
+    function addConfirmation(bytes32 transactionHash, address owner)
+        private
+        is_not_confirmed(transactionHash, owner)
+    {
+        confirmations[transactionHash][owner] = true;
+        Confirmation(owner, transactionHash);
+    }
+
+    function filterTransactions(bool isPending)
+        private
+        returns (bytes32[] _transactionList)
+    {
+        bytes32[] memory _transactionListTemp = new bytes32[](transactionList.length);
+        uint count = 0;
+        for (uint i=0; i<transactionList.length; i++)
+            if (   isPending && !transactions[transactionList[i]].executed
+                || !isPending && transactions[transactionList[i]].executed)
+            {
+                _transactionListTemp[count] = transactionList[i];
+                count += 1;
+            }
+        _transactionList = new bytes32[](count);
+        for (i=0; i<count; i++)
+            if (_transactionListTemp[i] > 0)
+                _transactionList[i] = _transactionListTemp[i];
+    }
+
+    // NON-CONSTANT EXTERNAL METHODS
+
     function addOwner(address owner)
         external
         only_wallet
@@ -116,25 +203,6 @@ contract MultiSigWallet is SafeMath {
         RequiredUpdate(requiredSignatures);
     }
 
-    function addTransaction(address destination, uint value, bytes data, uint nonce)
-        private
-        address_not_null(destination)
-        returns (bytes32 transactionHash)
-    {
-        transactionHash = sha3(destination, value, data, nonce);
-        if (transactions[transactionHash].destination == 0) {
-            transactions[transactionHash] = Transaction({
-                destination: destination,
-                value: value,
-                data: data,
-                nonce: nonce,
-                executed: false
-            });
-            transactionList.push(transactionHash);
-            Submission(transactionHash);
-        }
-    }
-
     function submitTransaction(address destination, uint value, bytes data, uint nonce)
         external
         returns (bytes32 transactionHash)
@@ -151,16 +219,7 @@ contract MultiSigWallet is SafeMath {
         confirmTransactionWithSignatures(transactionHash, v, rs);
     }
 
-    function addConfirmation(bytes32 transactionHash, address owner)
-        private
-        is_not_confirmed(transactionHash, owner)
-    {
-        confirmations[transactionHash][owner] = true;
-        Confirmation(owner, transactionHash);
-    }
-
     function confirmTransaction(bytes32 transactionHash)
-        public
         is_owner(msg.sender)
     {
         addConfirmation(transactionHash, msg.sender);
@@ -168,7 +227,6 @@ contract MultiSigWallet is SafeMath {
     }
 
     function confirmTransactionWithSignatures(bytes32 transactionHash, uint8[] v, bytes32[] rs)
-        public
         is_owners_signature(transactionHash, v, rs)
     {
         for (uint i=0; i<v.length; i++)
@@ -177,7 +235,6 @@ contract MultiSigWallet is SafeMath {
     }
 
     function executeTransaction(bytes32 transactionHash)
-        public
         is_not_executed(transactionHash)
     {
         if (isConfirmed(transactionHash)) {
@@ -199,77 +256,15 @@ contract MultiSigWallet is SafeMath {
         Revocation(msg.sender, transactionHash);
     }
 
-    function MultiSigWallet(address[] _owners, uint required)
-        valid_amount_of_required_signatures(_owners.length, required)
+    function MultiSigWallet(address[] setOwners, uint required)
+        valid_amount_of_required_signatures(setOwners.length, required)
     {
-        for (uint i=0; i<_owners.length; i++)
-            isOwner[_owners[i]] = true;
-        owners = _owners;
+        for (uint i = 0; i < setOwners.length; i++)
+            isOwner[setOwners[i]] = true;
+        owners = setOwners;
         requiredSignatures = required;
     }
 
-    function()
-        payable
-    {
-        if (msg.value > 0)
-            Deposit(msg.sender, msg.value);
-    }
+    function() payable { Deposit(msg.sender, msg.value); }
 
-    function isConfirmed(bytes32 transactionHash)
-        public
-        constant
-        returns (bool)
-    {
-        uint count = 0;
-        for (uint i=0; i<owners.length; i++)
-            if (confirmations[transactionHash][owners[i]])
-                count += 1;
-            if (count == requiredSignatures)
-                return true;
-    }
-
-    function confirmationCount(bytes32 transactionHash)
-        external
-        constant
-        returns (uint count)
-    {
-        for (uint i=0; i<owners.length; i++)
-            if (confirmations[transactionHash][owners[i]])
-                count += 1;
-    }
-
-    function filterTransactions(bool isPending)
-        private
-        returns (bytes32[] _transactionList)
-    {
-        bytes32[] memory _transactionListTemp = new bytes32[](transactionList.length);
-        uint count = 0;
-        for (uint i=0; i<transactionList.length; i++)
-            if (   isPending && !transactions[transactionList[i]].executed
-                || !isPending && transactions[transactionList[i]].executed)
-            {
-                _transactionListTemp[count] = transactionList[i];
-                count += 1;
-            }
-        _transactionList = new bytes32[](count);
-        for (i=0; i<count; i++)
-            if (_transactionListTemp[i] > 0)
-                _transactionList[i] = _transactionListTemp[i];
-    }
-
-    function getPendingTransactions()
-        external
-        constant
-        returns (bytes32[] _transactionList)
-    {
-        return filterTransactions(true);
-    }
-
-    function getExecutedTransactions()
-        external
-        constant
-        returns (bytes32[] _transactionList)
-    {
-        return filterTransactions(false);
-    }
 }
