@@ -61,17 +61,19 @@ contract MultiSigWallet is SafeMath {
         _;
     }
 
+    //TODO use msg.sender
     modifier is_confirmed(bytes32 transactionHash, address owner) {
         assert(confirmations[transactionHash][owner]);
         _;
     }
 
+    //TODO use msg.sender
     modifier is_not_confirmed(bytes32 transactionHash, address owner) {
         assert(!confirmations[transactionHash][owner]);
         _;
     }
 
-    modifier is_not_executed(bytes32 transactionHash) {
+    modifier transaction_is_not_executed(bytes32 transactionHash) {
         assert(!transactions[transactionHash].executed);
         _;
     }
@@ -89,26 +91,21 @@ contract MultiSigWallet is SafeMath {
         _;
     }
 
-    // CONSTANT METHODS
-
-    function isConfirmed(bytes32 transactionHash)
-        constant
-        returns (bool)
-    {
-        uint count = 0;
-        for (uint i = 0; i < owners.length; i++)
-            if (confirmations[transactionHash][owners[i]])
-                count += 1;
-            if (count == requiredSignatures)
-                return true;
+    modifier transaction_is_approved(bytes32 transactionHash) {
+        assert(requiredSignatures <= confirmationCount(transactionHash));
+        _;
     }
 
-    function confirmationCount(bytes32 transactionHash)
-        external
-        constant
-        returns (uint count)
+    // CONSTANT METHODS
+
+    function isConfirmed(bytes32 transactionHash) constant returns (bool)
     {
-        for (uint i=0; i<owners.length; i++)
+        return requiredSignatures <= confirmationCount(transactionHash);
+    }
+
+    function confirmationCount(bytes32 transactionHash) constant returns (uint count)
+    {
+        for (uint i = 0; i < owners.length; i++)
             if (confirmations[transactionHash][owners[i]])
                 count += 1;
     }
@@ -194,15 +191,6 @@ contract MultiSigWallet is SafeMath {
         OwnerRemoval(owner);
     }
 
-    function updateRequiredSignatures(uint required)
-        public
-        only_wallet
-        valid_amount_of_required_signatures(owners.length, required)
-    {
-        requiredSignatures = required;
-        RequiredUpdate(requiredSignatures);
-    }
-
     function submitTransaction(address destination, uint value, bytes data, uint nonce)
         external
         returns (bytes32 transactionHash)
@@ -219,6 +207,16 @@ contract MultiSigWallet is SafeMath {
         confirmTransactionWithSignatures(transactionHash, v, rs);
     }
 
+    // NON-CONSTANT PUBLIC METHODS
+
+    function updateRequiredSignatures(uint required)
+        only_wallet
+        valid_amount_of_required_signatures(owners.length, required)
+    {
+        requiredSignatures = required;
+        RequiredUpdate(requiredSignatures);
+    }
+
     function confirmTransaction(bytes32 transactionHash)
         is_owner(msg.sender)
     {
@@ -229,28 +227,26 @@ contract MultiSigWallet is SafeMath {
     function confirmTransactionWithSignatures(bytes32 transactionHash, uint8[] v, bytes32[] rs)
         is_owners_signature(transactionHash, v, rs)
     {
-        for (uint i=0; i<v.length; i++)
+        for (uint i = 0; i < v.length; i++)
             addConfirmation(transactionHash, ecrecover(transactionHash, v[i], rs[i], rs[i + v.length]));
         executeTransaction(transactionHash);
     }
 
     function executeTransaction(bytes32 transactionHash)
-        is_not_executed(transactionHash)
+        transaction_is_not_executed(transactionHash)
+        transaction_is_approved(transactionHash)
     {
-        if (isConfirmed(transactionHash)) {
-            Transaction tx = transactions[transactionHash];
-            tx.executed = true;
-            if (!tx.destination.call.value(tx.value)(tx.data))
-                throw;
-            Execution(transactionHash);
-        }
+        Transaction tx = transactions[transactionHash];
+        tx.executed = true;
+        assert(tx.destination.call.value(tx.value)(tx.data));
+        Execution(transactionHash);
     }
 
     function revokeConfirmation(bytes32 transactionHash)
         external
         is_owner(msg.sender)
         is_confirmed(transactionHash, msg.sender)
-        is_not_executed(transactionHash)
+        transaction_is_not_executed(transactionHash)
     {
         confirmations[transactionHash][msg.sender] = false;
         Revocation(msg.sender, transactionHash);
