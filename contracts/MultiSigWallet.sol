@@ -61,14 +61,14 @@ contract MultiSigWallet is SafeMath {
         _;
     }
 
-    //TODO use msg.sender
     modifier is_confirmed(bytes32 transactionHash, address owner) {
+        //TODO use msg.sender
         assert(confirmations[transactionHash][owner]);
         _;
     }
 
-    //TODO use msg.sender
     modifier is_not_confirmed(bytes32 transactionHash, address owner) {
+        //TODO use msg.sender
         assert(!confirmations[transactionHash][owner]);
         _;
     }
@@ -98,17 +98,14 @@ contract MultiSigWallet is SafeMath {
 
     // CONSTANT METHODS
 
-    function isConfirmed(bytes32 transactionHash) constant returns (bool)
-    {
-        return requiredSignatures <= confirmationCount(transactionHash);
-    }
-
     function confirmationCount(bytes32 transactionHash) constant returns (uint count)
     {
         for (uint i = 0; i < owners.length; i++)
             if (confirmations[transactionHash][owners[i]])
                 count += 1;
     }
+
+    function isConfirmed(bytes32 transactionHash) constant returns (bool) { return requiredSignatures <= confirmationCount(transactionHash); }
 
     function getPendingTransactions() external constant returns (bytes32[]) { return filterTransactions(true); }
 
@@ -232,16 +229,6 @@ contract MultiSigWallet is SafeMath {
         executeTransaction(transactionHash);
     }
 
-    function executeTransaction(bytes32 transactionHash)
-        transaction_is_not_executed(transactionHash)
-        transaction_is_approved(transactionHash)
-    {
-        Transaction tx = transactions[transactionHash];
-        tx.executed = true;
-        assert(tx.destination.call.value(tx.value)(tx.data));
-        Execution(transactionHash);
-    }
-
     function revokeConfirmation(bytes32 transactionHash)
         external
         is_owner(msg.sender)
@@ -250,6 +237,16 @@ contract MultiSigWallet is SafeMath {
     {
         confirmations[transactionHash][msg.sender] = false;
         Revocation(msg.sender, transactionHash);
+    }
+
+    function executeTransaction(bytes32 transactionHash)
+        transaction_is_not_executed(transactionHash)
+        transaction_is_approved(transactionHash)
+    {
+        Transaction tx = transactions[transactionHash];
+        tx.executed = true;
+        assert(tx.destination.call.value(tx.value)(tx.data));
+        Execution(transactionHash);
     }
 
     function MultiSigWallet(address[] setOwners, uint required)
