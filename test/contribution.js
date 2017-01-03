@@ -50,23 +50,31 @@ contract('Contribution', (accounts) => {
   const ether = new BigNumber(Math.pow(10,18));
 
   // Constant fields
-  const ETHER_CAP = 250000 * ether; // max amount raised during contribution
+  const ETHER_CAP = 250000 * ether; // max amount raised during this contribution; targeted amount CHF 2.5MN
   const MAX_CONTRIBUTION_DURATION = 4 * weeks; // max amount in seconds of contribution period
-  const MAX_TOTAL_VOUCHER_AMOUNT = 1250000; // max amount of total vouchers raised during contribution
-  const LIQUID_ETHER_CAP = ETHER_CAP * 100 / 100; // liquid means tradeable
+  const MAX_TOTAL_VOUCHER_AMOUNT = 1250000; // max amount of total vouchers raised during all contribution periods
   const BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
-  const FOUNDER_STAKE = 450; // 4.5% of all created melon voucher allocated to melonport
-  const EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon voucher allocated to melonport
-  const EXT_COMPANY_STAKE_TWO = 100; // 3% of all created melon voucher allocated to melonport
-  const ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon voucher allocated to melonport
-  const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon voucher allocated to melonport
+  // Price Rates
+  const PRICE_RATE_FIRST = 2000; // Four price tiers, each valid for two weeks
+  const PRICE_RATE_SECOND = 1950;
+  const PRICE_RATE_THIRD = 1900;
+  const PRICE_RATE_FOURTH = 1850;
+  const DIVISOR_PRICE = 1000; // Price rates are divided by this number
+  // Addresses of Patrons
+  const FOUNDER_ONE = 0xF1;
+  const FOUNDER_TWO = 0xF2;
+  const EXT_COMPANY_ONE = 0xC1;
+  const EXT_COMPANY_TWO = 0xC2;
+  const ADVISOR_ONE = 0xA1;
+  const ADVISOR_TWO = 0xA2;
+  // Stakes of Patrons
   const DIVISOR_STAKE = 10000; // stakes are divided by this number; results to one basis point
-  const ICED_RATE = 1125; // One iced tier, remains constant for the duration of the contribution
-  const LIQUID_RATE_FIRST = 2000; // Four liquid tiers, each valid for two weeks
-  const LIQUID_RATE_SECOND = 1950;
-  const LIQUID_RATE_THIRD = 1900;
-  const LIQUID_RATE_FOURTH = 1850;
-  const DIVISOR_RATE = 1000; // price rates are divided by this number
+  const MELONPORT_COMPANY_STAKE = 1000; // 12% of all created melon voucher allocated to melonport company
+  const EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon voucher allocated to external company
+  const EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon voucher allocated to external company
+  const FOUNDER_STAKE = 450; // 4.5% of all created melon voucher allocated to founder
+  const ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon voucher allocated to advisor
+  const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon voucher allocated to advisor
 
   // Test globals
   let contributionContract;
@@ -96,17 +104,17 @@ contract('Contribution', (accounts) => {
 
   it('Set up test cases', (done) => {
     testCases = [];
-    const numBlocks = 8;
-    for (i = 0; i < numBlocks; i++) {
-      const blockNumber = Math.round(startTime + (endTime-startTime)*i/(numBlocks-1));
+    const numBlockTimes = 8;
+    for (i = 0; i < numBlockTimes; i++) {
+      const blockTime = Math.round(startTime + (endTime - startTime)*i / (numBlockTimes - 1));
       let expectedPrice;
-      if (blockNumber>=startTime && blockNumber<startTime + 1*weeks) {
+      if (blockTime>=startTime && blockTime<startTime + 1*weeks) {
         expectedPrice = 2000;
-      } else if (blockNumber>=startTime + 1*weeks && blockNumber < startTime + 2*weeks) {
+      } else if (blockTime>=startTime + 1*weeks && blockTime < startTime + 2*weeks) {
         expectedPrice = 1950;
-      } else if (blockNumber>=startTime + 2*weeks && blockNumber < startTime + 3*weeks) {
+      } else if (blockTime>=startTime + 2*weeks && blockTime < startTime + 3*weeks) {
         expectedPrice = 1900;
-      } else if (blockNumber>=startTime + 3*weeks && blockNumber < endTime) {
+      } else if (blockTime>=startTime + 3*weeks && blockTime < endTime) {
         expectedPrice = 1850;
       } else {
         expectedPrice = 0;
@@ -117,12 +125,11 @@ contract('Contribution', (accounts) => {
       testCases.push(
         {
           accountNum: accountNum,
-          blockNumber: blockNumber,
+          blockTime: blockTime,
           expectedPrice: expectedPrice,
           account: account,
         }
       );
-      console.log(testCases[i])
     }
     done();
   });
@@ -159,9 +166,9 @@ contract('Contribution', (accounts) => {
   });
 
   it('Check premined allocation', (done) => {
-    melonContract.lockedBalanceOf('0xF1').then((result) => {
+    melonContract.lockedBalanceOf(FOUNDER_ONE).then((result) => {
       console.log(result.toNumber());
-      return melonContract.lockedBalanceOf('0xF2');
+      return melonContract.lockedBalanceOf(FOUNDER_TWO);
     }).then((result) => {
       console.log(result.toNumber());
       done();
