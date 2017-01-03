@@ -171,8 +171,23 @@ contract('Contribution', (accounts) => {
     });
   });
 
-  it('Check premined allocation', (done) => {
+  it('Check Melon Voucher initialisation', (done) => {
+    melonContract.minter().then((result) => {
+      assert.equal(result, contributionContract.address);
+      return melonContract.melonport();
+    }).then((result) => {
+      assert.equal(result, melonport);
+      return melonContract.startTime();
+    }).then((result) => {
+      assert.equal(result, startTime);
+      return melonContract.endTime();
+    }).then((result) => {
+      assert.equal(result, endTime)
+      done();
+    });
+  });
 
+  it('Check premined allocation', (done) => {
     melonContract.balanceOf(melonport).then((result) => {
       assert.equal(result.toNumber(), MELONPORT_COMPANY_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
       return melonContract.lockedBalanceOf(FOUNDER_ONE);
