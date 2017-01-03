@@ -1,11 +1,11 @@
 pragma solidity ^0.4.4;
 
-import "./dependencies/SafeMath.sol";
+import "./dependencies/Assertive.sol";
 
-/// @title Multisignature wallet - Allows multiple parties to agree on transactions before execution.
+/// @title Simple multi signature contract
 /// @author Melonport AG <team@melonport.com>
-/// @notice Inspired by Stefan George - <stefan.george@consensys.net>
-contract MultiSigWallet is SafeMath {
+/// @notice Allows multiple parties to agree on transactions before execution
+contract MultiSigWallet is Assertive {
 
     // TYPES
 
@@ -19,13 +19,15 @@ contract MultiSigWallet is SafeMath {
 
     // FILEDS
 
-    // Fields that can be changed by functions
-    mapping (bytes32 => Transaction) public transactions;
-    mapping (bytes32 => mapping (address => bool)) public confirmations;
-    mapping (address => bool) public isOwner;
-    address[] owners;
-    bytes32[] transactionList;
+    // Fields that are only changed in constructor
+    address[] multiSigOwners;
+    mapping (address => bool) public isMultiSigOwner;
     uint public requiredSignatures;
+
+    // Fields that can be changed by functions
+    bytes32[] transactionList; // Array of transactions hashes
+    mapping (bytes32 => Transaction) public transactions; // Maps transaction hash to transaction struct
+    mapping (bytes32 => mapping (address => bool)) public confirmations;
 
     // EVENTS
 
@@ -34,30 +36,17 @@ contract MultiSigWallet is SafeMath {
     event Submission(bytes32 transactionHash);
     event Execution(bytes32 transactionHash);
     event Deposit(address sender, uint value);
-    event OwnerAddition(address owner);
-    event OwnerRemoval(address owner);
-    event RequiredUpdate(uint requiredSignatures);
 
     // MODIFIERS
 
-    modifier only_wallet {
-        assert(msg.sender == address(this));
-        _;
-    }
-
-    modifier is_owners_signature(bytes32 transactionHash, uint8[] v, bytes32[] rs) {
+    modifier is_multi_sig_owners_signature(bytes32 transactionHash, uint8[] v, bytes32[] rs) {
         for (uint i = 0; i < v.length; i++)
-            assert(isOwner[ecrecover(transactionHash, v[i], rs[i], rs[v.length + i])]);
+            assert(isMultiSigOwner[ecrecover(transactionHash, v[i], rs[i], rs[v.length + i])]);
         _;
     }
 
     modifier is_owner(address owner) {
-        assert(isOwner[owner]);
-        _;
-    }
-
-    modifier is_not_owner(address owner) {
-        assert(!isOwner[owner]);
+        assert(isMultiSigOwner[owner]);
         _;
     }
 
@@ -100,8 +89,8 @@ contract MultiSigWallet is SafeMath {
 
     function confirmationCount(bytes32 transactionHash) constant returns (uint count)
     {
-        for (uint i = 0; i < owners.length; i++)
-            if (confirmations[transactionHash][owners[i]])
+        for (uint i = 0; i < multiSigOwners.length; i++)
+            if (confirmations[transactionHash][multiSigOwners[i]])
                 count += 1;
     }
 
@@ -142,51 +131,24 @@ contract MultiSigWallet is SafeMath {
 
     function filterTransactions(bool isPending)
         private
-        returns (bytes32[] _transactionList)
+        returns (bytes32[] transactionListFiltered)
     {
-        bytes32[] memory _transactionListTemp = new bytes32[](transactionList.length);
+        bytes32[] memory transactionListTemp = new bytes32[](transactionList.length);
         uint count = 0;
         for (uint i = 0; i < transactionList.length; i++)
             if (   isPending && !transactions[transactionList[i]].executed
                 || !isPending && transactions[transactionList[i]].executed)
             {
-                _transactionListTemp[count] = transactionList[i];
+                transactionListTemp[count] = transactionList[i];
                 count += 1;
             }
-        _transactionList = new bytes32[](count);
+        transactionListFiltered = new bytes32[](count);
         for (i = 0; i < count; i++)
-            if (_transactionListTemp[i] > 0)
-                _transactionList[i] = _transactionListTemp[i];
+            if (transactionListTemp[i] > 0)
+                transactionListFiltered[i] = transactionListTemp[i];
     }
 
     // NON-CONSTANT EXTERNAL METHODS
-
-    function addOwner(address owner)
-        external
-        only_wallet
-        is_not_owner(owner)
-    {
-        isOwner[owner] = true;
-        owners.push(owner);
-        OwnerAddition(owner);
-    }
-
-    function removeOwner(address owner)
-        external
-        only_wallet
-        is_owner(owner)
-    {
-        isOwner[owner] = false;
-        for (uint i = 0; i < owners.length - 1; i++)
-            if (owners[i] == owner) {
-                owners[i] = owners[owners.length - 1];
-                break;
-            }
-        owners.length -= 1;
-        if (requiredSignatures > owners.length)
-            updateRequiredSignatures(owners.length);
-        OwnerRemoval(owner);
-    }
 
     function submitTransaction(address destination, uint value, bytes data, uint nonce)
         external
@@ -206,14 +168,6 @@ contract MultiSigWallet is SafeMath {
 
     // NON-CONSTANT PUBLIC METHODS
 
-    function updateRequiredSignatures(uint required)
-        only_wallet
-        valid_amount_of_required_signatures(owners.length, required)
-    {
-        requiredSignatures = required;
-        RequiredUpdate(requiredSignatures);
-    }
-
     function confirmTransaction(bytes32 transactionHash)
         is_owner(msg.sender)
     {
@@ -222,7 +176,7 @@ contract MultiSigWallet is SafeMath {
     }
 
     function confirmTransactionWithSignatures(bytes32 transactionHash, uint8[] v, bytes32[] rs)
-        is_owners_signature(transactionHash, v, rs)
+        is_multi_sig_owners_signature(transactionHash, v, rs)
     {
         for (uint i = 0; i < v.length; i++)
             addConfirmation(transactionHash, ecrecover(transactionHash, v[i], rs[i], rs[i + v.length]));
@@ -249,13 +203,13 @@ contract MultiSigWallet is SafeMath {
         Execution(transactionHash);
     }
 
-    function MultiSigWallet(address[] setOwners, uint required)
-        valid_amount_of_required_signatures(setOwners.length, required)
+    function MultiSigWallet(address[] setOwners, uint setRequiredSignatures)
+        valid_amount_of_required_signatures(setOwners.length, setRequiredSignatures)
     {
         for (uint i = 0; i < setOwners.length; i++)
-            isOwner[setOwners[i]] = true;
-        owners = setOwners;
-        requiredSignatures = required;
+            isMultiSigOwner[setOwners[i]] = true;
+        multiSigOwners = setOwners;
+        requiredSignatures = setRequiredSignatures;
     }
 
     function() payable { Deposit(msg.sender, msg.value); }
