@@ -85,8 +85,12 @@ contract('Contribution', (accounts) => {
   const btcs = accounts[1];
   const signer = accounts[2];
 
+  var initalBlockTime;
+  const startDelay = 1 * weeks;
   var startTime;
   var endTime;
+  const numTestCases = 8;
+  var timeSpacingTestCases;
   var timeTravelTwoYearForward = 2 * 52 * weeks;
 
   before('Check accounts', (done) => {
@@ -96,17 +100,19 @@ contract('Contribution', (accounts) => {
 
   it('Set startTime as now', (done) => {
     web3.eth.getBlock('latest', function(err, result) {
-      startTime = result.timestamp;
+      initalBlockTime = result.timestamp;
+      startTime = initalBlockTime + startDelay;
       endTime = startTime + 4*weeks;
+      timeSpacingTestCases = (endTime - startTime) / (numTestCases - 1)
+
       done();
     });
   });
 
   it('Set up test cases', (done) => {
     testCases = [];
-    const numBlockTimes = 8;
-    for (i = 0; i < numBlockTimes; i++) {
-      const blockTime = Math.round(startTime + (endTime - startTime)*i / (numBlockTimes - 1));
+    for (i = 0; i < numTestCases; i++) {
+      const blockTime = Math.round(startTime + i * timeSpacingTestCases);
       let expectedPrice;
       if (blockTime>=startTime && blockTime<startTime + 1*weeks) {
         expectedPrice = 2000;
@@ -166,11 +172,27 @@ contract('Contribution', (accounts) => {
   });
 
   it('Check premined allocation', (done) => {
-    melonContract.lockedBalanceOf(FOUNDER_ONE).then((result) => {
-      console.log(result.toNumber());
+
+    melonContract.balanceOf(melonport).then((result) => {
+      assert.equal(result.toNumber(), MELONPORT_COMPANY_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+      return melonContract.lockedBalanceOf(FOUNDER_ONE);
+    }).then((result) => {
+      assert.equal(result.toNumber(), FOUNDER_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
       return melonContract.lockedBalanceOf(FOUNDER_TWO);
     }).then((result) => {
-      console.log(result.toNumber());
+      assert.equal(result.toNumber(), FOUNDER_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+      return melonContract.lockedBalanceOf(EXT_COMPANY_ONE);
+    }).then((result) => {
+      assert.equal(result.toNumber(), EXT_COMPANY_STAKE_ONE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+      return melonContract.lockedBalanceOf(EXT_COMPANY_TWO);
+    }).then((result) => {
+      assert.equal(result.toNumber(), EXT_COMPANY_STAKE_TWO * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+      return melonContract.lockedBalanceOf(ADVISOR_ONE);
+    }).then((result) => {
+      assert.equal(result.toNumber(), ADVISOR_STAKE_ONE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+      return melonContract.lockedBalanceOf(ADVISOR_TWO);
+    }).then((result) => {
+      assert.equal(result.toNumber(), ADVISOR_STAKE_TWO * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
       done();
     })
   });
@@ -186,7 +208,7 @@ contract('Contribution', (accounts) => {
 
         web3.eth.getBlock('latest', (err, block) => {
           if(err) return done(err)
-          var secondsJumped = block.timestamp - startTime
+          var secondsJumped = block.timestamp - initalBlockTime;
 
           // Somehow it jumps an extra 18 seconds, ish, when run inside the whole
           // test suite. It might have something to do with when the before block
