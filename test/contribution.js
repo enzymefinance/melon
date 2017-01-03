@@ -77,9 +77,14 @@ contract('Contribution', (accounts) => {
   const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon voucher allocated to advisor
 
   // Test globals
+  let multisigContract;
   let contributionContract;
   let melonContract;
   let testCases;
+
+  // Multisig
+  const multiSigOwners = accounts.slice(0, 6);
+  const requiredSignatures = 4;
 
   const melonport = accounts[0];
   const btcs = accounts[1];
@@ -91,6 +96,9 @@ contract('Contribution', (accounts) => {
   var endTime;
   const numTestCases = 8;
   var timeSpacingTestCases;
+
+  var snapshotIds = [];
+
   var timeTravelTwoYearForward = 2 * 52 * weeks;
 
   before('Check accounts', (done) => {
@@ -98,13 +106,21 @@ contract('Contribution', (accounts) => {
     done();
   });
 
+  beforeEach("Checkpoint, so that we can revert later", (done) => {
+    send("evm_snapshot", (err, result) => {
+      if (!err) {
+        snapshotIds.push(result.id);
+      }
+      done(err);
+    });
+  });
+
   it('Set startTime as now', (done) => {
     web3.eth.getBlock('latest', function(err, result) {
       initalBlockTime = result.timestamp;
       startTime = initalBlockTime + startDelay;
       endTime = startTime + 4*weeks;
-      timeSpacingTestCases = (endTime - startTime) / (numTestCases - 1)
-
+      timeSpacingTestCases = (endTime - startTime) / (numTestCases - 1);
       done();
     });
   });
@@ -158,7 +174,17 @@ contract('Contribution', (accounts) => {
     );
   });
 
-  it('Deploy smart contracts', (done) => {
+  it('Deploy Multisig wallet', (done) => {
+    MultiSigWallet.new(multiSigOwners, requiredSignatures).then((result) => {
+      multisigContract = result;
+      return multisigContract.requiredSignatures();
+    }).then((result) => {
+      assert.equal(result, requiredSignatures);
+      done();
+    });
+  });
+
+  it('Deploy Contribution contracts', (done) => {
     Contribution.new(melonport, btcs, signer, startTime).then((result) => {
       contributionContract = result;
       return contributionContract.melonVoucher();
@@ -212,7 +238,15 @@ contract('Contribution', (accounts) => {
     })
   });
 
-  it('Time travel one year forward', function(done) {
+  it('Test changing Melonport address', (done) => {
+    done();
+  });
+
+  it('Test BTCS access', (done) => {
+    done();
+  });
+
+  it('Time travel one year forward', (done) => {
     // Adjust time
     send("evm_increaseTime", [timeTravelTwoYearForward], (err, result) => {
       if (err) return done(err);

@@ -53,7 +53,7 @@ contract Contribution is SafeMath {
 
     // EVENTS
 
-    event LiquidVoucherBought(address indexed sender, uint eth, uint vouchers);
+    event VouchersBought(address indexed sender, uint eth, uint vouchers);
 
     // MODIFIERS
 
@@ -131,7 +131,7 @@ contract Contribution is SafeMath {
         signer = setSigner;
         startTime = setStartTime;
         endTime = startTime + MAX_CONTRIBUTION_DURATION;
-        melonVoucher = new MelonVoucher(this, melonport,startTime, endTime); // Create Melon Voucher Contract
+        melonVoucher = new MelonVoucher(this, melonport, startTime, endTime); // Create Melon Voucher Contract
         // Mint liquid vouchers for melonport company, liquid means tradeale
         melonVoucher.mintLiquidVoucher(melonport, MELONPORT_COMPANY_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
         // Mint iced vouchers that are unable to trade for two years and allocate according to relevant stakes
@@ -161,7 +161,7 @@ contract Contribution is SafeMath {
         melonVoucher.mintLiquidVoucher(recipient, vouchers);
         etherRaised = safeAdd(etherRaised, msg.value);
         assert(melonport.send(msg.value));
-        LiquidVoucherBought(recipient, msg.value, vouchers);
+        VouchersBought(recipient, msg.value, vouchers);
     }
 
     /// Pre: BTCS before contribution period, BTCS has exclusiv right to buy up to 25% of all vouchers
@@ -177,7 +177,7 @@ contract Contribution is SafeMath {
         melonVoucher.mintLiquidVoucher(recipient, vouchers);
         etherRaised = safeAdd(etherRaised, msg.value);
         assert(melonport.send(msg.value));
-        LiquidVoucherBought(recipient, msg.value, vouchers);
+        VouchersBought(recipient, msg.value, vouchers);
     }
 
     /// Pre: Emergency situation that requires contribution period to stop.
