@@ -269,6 +269,9 @@ contract('Contribution', (accounts) => {
         done();
       })
     });
+  });
+
+  describe('CONTRIBUTION', () => {
 
     it('Test BTCS access', (done) => {
       const btcsRecipients = accounts.slice(0, 2);
@@ -284,10 +287,19 @@ contract('Contribution', (accounts) => {
         return melonContract.balanceOf(btcsRecipients[0]);
       }).then((result) => {
         assert.equal(result.toNumber(), btcsAmounts[0] * PRICE_RATE_FIRST / DIVISOR_PRICE);
-        // send("evm_increaseTime", [seconds], (err, result) => {
-        //   if (err) return done(err);
-        // });
-        done();
+        // After contribution period already started
+        send("evm_increaseTime", [startDelay], (err, result) => {
+          if (err) return done(err);
+          contributionContract.btcsBuyLiquidRecipient(
+            btcsRecipients[1],
+            { from: btcs, value: btcsAmounts[0] })
+          .then(() => {
+            assert.fail();
+          }).catch((err) => {
+            assert.notEqual(err.name, 'AssertionError');
+            done();
+          });
+        });
       });
     });
 
