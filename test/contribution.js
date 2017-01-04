@@ -77,8 +77,12 @@ contract('Contribution', (accounts) => {
   const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon voucher allocated to advisor
 
   // Melon Voucher constant fields
+  const decimals = 18;
   const THAWING_DURATION = 2 * years; // time needed for iced vouchers to thaw into liquid vouchers
-  const MAX_TOTAL_VOUCHER_AMOUNT = 1250000; // max amount of total vouchers raised during all contributions
+  const MAX_TOTAL_VOUCHER_AMOUNT = 1250000 * (new BigNumber(Math.pow(10, decimals))); // max amount of total vouchers raised during all contributions
+
+  const MAX_TOTAL_MLN_AMOUNT = 1250000
+  const mln = new BigNumber(Math.pow(10, decimals))
 
   // Test globals
   let multisigContract;
@@ -222,40 +226,82 @@ contract('Contribution', (accounts) => {
 
     it('Check premined allocation', (done) => {
       melonContract.balanceOf(melonport).then((result) => {
-        assert.equal(result.toNumber(), MELONPORT_COMPANY_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        assert.equal(
+          result.toNumber(),
+          MELONPORT_COMPANY_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
         return melonContract.lockedBalanceOf(FOUNDER_ONE);
       }).then((result) => {
-        assert.equal(result.toNumber(), FOUNDER_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        assert.equal(
+          result.toNumber(),
+          FOUNDER_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
         return melonContract.lockedBalanceOf(FOUNDER_TWO);
       }).then((result) => {
-        assert.equal(result.toNumber(), FOUNDER_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        assert.equal(
+          result.toNumber(),
+          FOUNDER_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
         return melonContract.lockedBalanceOf(EXT_COMPANY_ONE);
       }).then((result) => {
-        assert.equal(result.toNumber(), EXT_COMPANY_STAKE_ONE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        assert.equal(
+          result.toNumber(),
+          EXT_COMPANY_STAKE_ONE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
         return melonContract.lockedBalanceOf(EXT_COMPANY_TWO);
       }).then((result) => {
-        assert.equal(result.toNumber(), EXT_COMPANY_STAKE_TWO * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        assert.equal(
+          result.toNumber(),
+          EXT_COMPANY_STAKE_TWO * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
         return melonContract.lockedBalanceOf(ADVISOR_ONE);
       }).then((result) => {
-        assert.equal(result.toNumber(), ADVISOR_STAKE_ONE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        assert.equal(
+          result.toNumber(),
+          ADVISOR_STAKE_ONE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
         return melonContract.lockedBalanceOf(ADVISOR_TWO);
       }).then((result) => {
-        assert.equal(result.toNumber(), ADVISOR_STAKE_TWO * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        assert.equal(
+          result.toNumber(),
+          ADVISOR_STAKE_TWO * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
         done();
       })
     });
-  });
 
-  describe('CONTRIBUTION', () => {
+    it('Test BTCS access', (done) => {
+      const btcsRecipients = accounts.slice(0, 2);
+      const btcsAmounts = [
+        web3.toWei(2.1, "ether"),
+        web3.toWei(2.1, "ether"),
+        web3.toWei(2.1, "ether"),
+      ];
+
+      contributionContract.btcsBuyLiquidRecipient(
+        btcsRecipients[0],
+        { from: btcs, value: btcsAmounts[0] }).then(() => {
+        return melonContract.balanceOf(btcsRecipients[0]);
+      }).then((result) => {
+        assert.equal(result.toNumber(), btcsAmounts[0] * PRICE_RATE_FIRST / DIVISOR_PRICE);
+        // send("evm_increaseTime", [seconds], (err, result) => {
+        //   if (err) return done(err);
+        // });
+        done();
+      });
+    });
+
+    it('Test buy', (done) => {
+      done();
+    });
+
+    it('Test buying on behalf of a recipient', (done) => {
+      done();
+    });
 
     it('Test changing Melonport address', (done) => {
       done();
     });
-
-    it('Test BTCS access', (done) => {
-      done();
-    });
-
   });
 
   describe('SETTING OF NEW MINTER', () => {

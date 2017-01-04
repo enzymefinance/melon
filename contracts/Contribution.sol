@@ -52,7 +52,7 @@ contract Contribution is SafeMath {
 
     // EVENTS
 
-    event VouchersBought(address indexed sender, uint eth, uint vouchers);
+    event VouchersBought(address indexed sender, uint eth, uint amount);
 
     // MODIFIERS
 
@@ -157,11 +157,11 @@ contract Contribution is SafeMath {
         is_not_halted
         ether_cap_not_reached
     {
-        uint vouchers = safeMul(msg.value, priceRate()) / DIVISOR_PRICE;
-        melonVoucher.mintLiquidVoucher(recipient, vouchers);
+        uint amount = safeMul(msg.value, priceRate()) / DIVISOR_PRICE;
+        melonVoucher.mintLiquidVoucher(recipient, amount);
         etherRaised = safeAdd(etherRaised, msg.value);
         assert(melonport.send(msg.value));
-        VouchersBought(recipient, msg.value, vouchers);
+        VouchersBought(recipient, msg.value, amount);
     }
 
     /// Pre: BTCS before contribution period, BTCS has exclusiv right to buy up to 25% of all vouchers
@@ -173,11 +173,11 @@ contract Contribution is SafeMath {
         is_not_halted
         btcs_ether_cap_not_reached
     {
-        uint vouchers = safeMul(msg.value, priceRate()) / DIVISOR_PRICE;
-        melonVoucher.mintLiquidVoucher(recipient, vouchers);
+        uint amount = safeMul(msg.value, PRICE_RATE_FIRST) / DIVISOR_PRICE;
+        melonVoucher.mintLiquidVoucher(recipient, amount);
         etherRaised = safeAdd(etherRaised, msg.value);
         assert(melonport.send(msg.value));
-        VouchersBought(recipient, msg.value, vouchers);
+        VouchersBought(recipient, msg.value, amount);
     }
 
     /// Pre: Emergency situation that requires contribution period to stop.

@@ -14,7 +14,7 @@ contract MelonVoucher is ERC20, SafeMath {
     string public constant symbol = "MLN";
     uint public constant decimals = 18;
     uint public constant THAWING_DURATION = 2 years; // time needed for iced vouchers to thaw into liquid vouchers
-    uint public constant MAX_TOTAL_VOUCHER_AMOUNT = 1250000; // max amount of total vouchers raised during all contributions
+    uint public constant MAX_TOTAL_VOUCHER_AMOUNT = 1250000 * 10 ** decimals; // max amount of total vouchers raised during all contributions
 
     // Fields that are only changed in constructor
     address public minter; // Contribution contract(s)
