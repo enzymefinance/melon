@@ -272,32 +272,46 @@ contract('Contribution', (accounts) => {
   });
 
   describe('CONTRIBUTION', () => {
-
     it('Test BTCS access', (done) => {
-      const btcsRecipients = accounts.slice(0, 2);
-      const btcsAmounts = [
-        web3.toWei(2.1, "ether"),
-        web3.toWei(2.1, "ether"),
-        web3.toWei(2.1, "ether"),
-      ];
 
-      contributionContract.btcsBuyLiquidRecipient(
-        btcsRecipients[0],
-        { from: btcs, value: btcsAmounts[0] }).then(() => {
-        return melonContract.balanceOf(btcsRecipients[0]);
-      }).then((result) => {
-        assert.equal(result.toNumber(), btcsAmounts[0] * PRICE_RATE_FIRST / DIVISOR_PRICE);
-        // After contribution period already started
-        send("evm_increaseTime", [startDelay], (err, result) => {
-          if (err) return done(err);
-          contributionContract.btcsBuyLiquidRecipient(
-            btcsRecipients[1],
-            { from: btcs, value: btcsAmounts[0] })
-          .then(() => {
-            assert.fail();
-          }).catch((err) => {
-            assert.notEqual(err.name, 'AssertionError');
-            done();
+      const testCase = {
+        buyer: btcs,
+        buy_for_how_much_ether: web3.toWei(2.1, "ether"),
+        recipient_of_melon: accounts[5],
+        expected_price: PRICE_RATE_FIRST / DIVISOR_PRICE,
+        expected_melon_amount: web3.toWei(2.1, "ether") * PRICE_RATE_FIRST / DIVISOR_PRICE,
+      }
+
+      web3.eth.getBalance(melonport, (err, result) => {
+        const initialBalance = result;
+
+        contributionContract.btcsBuyLiquidRecipient(
+          testCase.recipient_of_melon,
+          { from: testCase.buyer, value: testCase.buy_for_how_much_ether }).then(() => {
+          return melonContract.balanceOf(testCase.recipient_of_melon);
+        }).then((result) => {
+          assert.equal(
+            result.toNumber(),
+            testCase.expected_melon_amount);
+          // After contribution period already started
+          send("evm_increaseTime", [startDelay], (err, result) => {
+            if (err) return done(err);
+            contributionContract.btcsBuyLiquidRecipient(
+              testCase.recipient_of_melon,
+              { from: testCase.buyer, value: testCase.buy_for_how_much_ether })
+            .then(() => {
+              assert.fail();
+            }).catch((err) => {
+              assert.notEqual(err.name, 'AssertionError');
+              web3.eth.getBalance(melonport, (err, result) => {
+                var finalBalance = result;
+                assert.equal(
+                  finalBalance.minus(initialBalance),
+                  testCase.buy_for_how_much_ether
+                );
+                done();
+              });
+            });
           });
         });
       });
