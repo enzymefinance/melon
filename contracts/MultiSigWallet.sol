@@ -4,7 +4,8 @@ import "./dependencies/Assertive.sol";
 
 /// @title Simple multi signature contract
 /// @author Melonport AG <team@melonport.com>
-/// @notice Allows multiple parties to agree on transactions before execution
+/// @notice Allows multiple owners to agree on any given transaction before execution
+/// @notice Inspired by https://github.com/ethereum/dapp-bin/blob/master/wallet/wallet.sol
 contract MultiSigWallet is Assertive {
 
     // TYPES
@@ -20,14 +21,14 @@ contract MultiSigWallet is Assertive {
     // FILEDS
 
     // Fields that are only changed in constructor
-    address[] multiSigOwners;
-    mapping (address => bool) public isMultiSigOwner;
-    uint public requiredSignatures;
+    address[] multiSigOwners; // Address with signing authority
+    mapping (address => bool) public isMultiSigOwner; // Has address siging authority
+    uint public requiredSignatures; // Number of signatures required to execute a transaction
 
     // Fields that can be changed by functions
     bytes32[] transactionList; // Array of transactions hashes
-    mapping (bytes32 => Transaction) public transactions; // Maps transaction hash to transaction struct
-    mapping (bytes32 => mapping (address => bool)) public confirmations;
+    mapping (bytes32 => Transaction) public transactions; // Maps transaction hash [bytes32[ to Transaction [struct]
+    mapping (bytes32 => mapping (address => bool)) public confirmations; // Whether [bool] transaction hash [bytes32] has been confirmed by by owner [address]
 
     // EVENTS
 
@@ -45,20 +46,18 @@ contract MultiSigWallet is Assertive {
         _;
     }
 
-    modifier is_multi_sig_owner(address owner) {
-        assert(isMultiSigOwner[owner]);
+    modifier only_multi_sig_owner {
+        assert(isMultiSigOwner[msg.sender]);
         _;
     }
 
-    modifier is_confirmed(bytes32 txHash, address owner) {
-        //TODO use msg.sender
-        assert(confirmations[txHash][owner]);
+    modifier msg_sender_has_confirmed(bytes32 txHash) {
+        assert(confirmations[txHash][msg.sender]);
         _;
     }
 
-    modifier is_not_confirmed(bytes32 txHash, address owner) {
-        //TODO use msg.sender
-        assert(!confirmations[txHash][owner]);
+    modifier msg_sender_has_not_confirmed(bytes32 txHash) {
+        assert(!confirmations[txHash][msg.sender]);
         _;
     }
 
@@ -142,7 +141,7 @@ contract MultiSigWallet is Assertive {
 
     function addConfirmation(bytes32 txHash, address owner)
         private
-        is_not_confirmed(txHash, owner)
+        msg_sender_has_not_confirmed(txHash)
     {
         confirmations[txHash][owner] = true;
         Confirmation(owner, txHash);
@@ -168,18 +167,18 @@ contract MultiSigWallet is Assertive {
 
     function revokeConfirmation(bytes32 txHash)
         external
-        is_multi_sig_owner(msg.sender)
-        is_confirmed(txHash, msg.sender)
+        only_multi_sig_owner
+        msg_sender_has_confirmed(txHash)
         transaction_is_not_executed(txHash)
     {
         confirmations[txHash][msg.sender] = false;
         Revocation(msg.sender, txHash);
-    }    
+    }
 
     // NON-CONSTANT PUBLIC METHODS
 
     function confirmTransaction(bytes32 txHash)
-        is_multi_sig_owner(msg.sender)
+        only_multi_sig_owner
     {
         addConfirmation(txHash, msg.sender);
         if (isConfirmed(txHash))
