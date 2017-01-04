@@ -95,13 +95,11 @@ contract MultiSigWallet is Assertive {
                 count += 1;
     }
 
-    function getPendingTransactions() external constant returns (bytes32[]) { return filterTransactions(true); }
+    function getPendingTransactions() constant returns (bytes32[]) { return filterTransactions(true); }
 
-    function getExecutedTransactions() external constant returns (bytes32[]) { return filterTransactions(false); }
+    function getExecutedTransactions() constant returns (bytes32[]) { return filterTransactions(false); }
 
-    function filterTransactions(bool isPending)
-        private
-        returns (bytes32[] transactionListFiltered)
+    function filterTransactions(bool isPending) constant returns (bytes32[] transactionListFiltered)
     {
         bytes32[] memory transactionListTemp = new bytes32[](transactionList.length);
         uint count = 0;
@@ -121,7 +119,7 @@ contract MultiSigWallet is Assertive {
     // NON-CONSTANT INTERNAL METHODS
 
     function addTransaction(address destination, uint value, bytes data, uint nonce)
-        private
+        internal
         address_not_null(destination)
         returns (bytes32 txHash)
     {
@@ -140,17 +138,17 @@ contract MultiSigWallet is Assertive {
     }
 
     function addConfirmation(bytes32 txHash, address owner)
-        private
+        internal
         msg_sender_has_not_confirmed(txHash)
     {
         confirmations[txHash][owner] = true;
         Confirmation(owner, txHash);
     }
 
-    // NON-CONSTANT EXTERNAL METHODS
+    // NON-CONSTANT PUBLIC METHODS
 
+    // Methods to submit a transaction
     function submitTransaction(address destination, uint value, bytes data, uint nonce)
-        external
         returns (bytes32 txHash)
     {
         txHash = addTransaction(destination, value, data, nonce);
@@ -158,25 +156,13 @@ contract MultiSigWallet is Assertive {
     }
 
     function submitTransactionWithSignatures(address destination, uint value, bytes data, uint nonce, uint8[] v, bytes32[] rs)
-        external
         returns (bytes32 txHash)
     {
         txHash = addTransaction(destination, value, data, nonce);
         confirmTransactionWithSignatures(txHash, v, rs);
     }
 
-    function revokeConfirmation(bytes32 txHash)
-        external
-        only_multi_sig_owner
-        msg_sender_has_confirmed(txHash)
-        transaction_is_not_executed(txHash)
-    {
-        confirmations[txHash][msg.sender] = false;
-        Revocation(msg.sender, txHash);
-    }
-
-    // NON-CONSTANT PUBLIC METHODS
-
+    // Methods to confirm a given transaction
     function confirmTransaction(bytes32 txHash)
         only_multi_sig_owner
     {
@@ -194,6 +180,17 @@ contract MultiSigWallet is Assertive {
             executeTransaction(txHash);
     }
 
+    // Method to revoke a given transaction
+    function revokeConfirmation(bytes32 txHash)
+        only_multi_sig_owner
+        msg_sender_has_confirmed(txHash)
+        transaction_is_not_executed(txHash)
+    {
+        confirmations[txHash][msg.sender] = false;
+        Revocation(msg.sender, txHash);
+    }
+
+    // Method to execute a given transaction
     function executeTransaction(bytes32 txHash)
         transaction_is_not_executed(txHash)
         transaction_is_confirmed(txHash)
