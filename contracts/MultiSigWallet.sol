@@ -31,39 +31,39 @@ contract MultiSigWallet is Assertive {
 
     // EVENTS
 
-    event Confirmation(address sender, bytes32 transactionHash);
-    event Revocation(address sender, bytes32 transactionHash);
-    event Submission(bytes32 transactionHash);
-    event Execution(bytes32 transactionHash);
+    event Confirmation(address sender, bytes32 txHash);
+    event Revocation(address sender, bytes32 txHash);
+    event Submission(bytes32 txHash);
+    event Execution(bytes32 txHash);
     event Deposit(address sender, uint value);
 
     // MODIFIERS
 
-    modifier is_multi_sig_owners_signature(bytes32 transactionHash, uint8[] v, bytes32[] rs) {
+    modifier is_multi_sig_owners_signature(bytes32 txHash, uint8[] v, bytes32[] rs) {
         for (uint i = 0; i < v.length; i++)
-            assert(isMultiSigOwner[ecrecover(transactionHash, v[i], rs[i], rs[v.length + i])]);
+            assert(isMultiSigOwner[ecrecover(txHash, v[i], rs[i], rs[v.length + i])]);
         _;
     }
 
-    modifier is_owner(address owner) {
+    modifier is_multi_sig_owner(address owner) {
         assert(isMultiSigOwner[owner]);
         _;
     }
 
-    modifier is_confirmed(bytes32 transactionHash, address owner) {
+    modifier is_confirmed(bytes32 txHash, address owner) {
         //TODO use msg.sender
-        assert(confirmations[transactionHash][owner]);
+        assert(confirmations[txHash][owner]);
         _;
     }
 
-    modifier is_not_confirmed(bytes32 transactionHash, address owner) {
+    modifier is_not_confirmed(bytes32 txHash, address owner) {
         //TODO use msg.sender
-        assert(!confirmations[transactionHash][owner]);
+        assert(!confirmations[txHash][owner]);
         _;
     }
 
-    modifier transaction_is_not_executed(bytes32 transactionHash) {
-        assert(!transactions[transactionHash].executed);
+    modifier transaction_is_not_executed(bytes32 txHash) {
+        assert(!transactions[txHash].executed);
         _;
     }
 
@@ -80,54 +80,25 @@ contract MultiSigWallet is Assertive {
         _;
     }
 
-    modifier transaction_is_approved(bytes32 transactionHash) {
-        assert(requiredSignatures <= confirmationCount(transactionHash));
+    modifier transaction_is_confirmed(bytes32 txHash) {
+        assert(isConfirmed(txHash));
         _;
     }
 
     // CONSTANT METHODS
 
-    function confirmationCount(bytes32 transactionHash) constant returns (uint count)
+    function isConfirmed(bytes32 txHash) constant returns (bool) { return requiredSignatures <= confirmationCount(txHash); }
+
+    function confirmationCount(bytes32 txHash) constant returns (uint count)
     {
         for (uint i = 0; i < multiSigOwners.length; i++)
-            if (confirmations[transactionHash][multiSigOwners[i]])
+            if (confirmations[txHash][multiSigOwners[i]])
                 count += 1;
     }
-
-    function isConfirmed(bytes32 transactionHash) constant returns (bool) { return requiredSignatures <= confirmationCount(transactionHash); }
 
     function getPendingTransactions() external constant returns (bytes32[]) { return filterTransactions(true); }
 
     function getExecutedTransactions() external constant returns (bytes32[]) { return filterTransactions(false); }
-
-    // NON-CONSTANT INTERNAL METHODS
-
-    function addTransaction(address destination, uint value, bytes data, uint nonce)
-        private
-        address_not_null(destination)
-        returns (bytes32 transactionHash)
-    {
-        transactionHash = sha3(destination, value, data, nonce);
-        if (transactions[transactionHash].destination == 0) {
-            transactions[transactionHash] = Transaction({
-                destination: destination,
-                value: value,
-                data: data,
-                nonce: nonce,
-                executed: false
-            });
-            transactionList.push(transactionHash);
-            Submission(transactionHash);
-        }
-    }
-
-    function addConfirmation(bytes32 transactionHash, address owner)
-        private
-        is_not_confirmed(transactionHash, owner)
-    {
-        confirmations[transactionHash][owner] = true;
-        Confirmation(owner, transactionHash);
-    }
 
     function filterTransactions(bool isPending)
         private
@@ -148,59 +119,90 @@ contract MultiSigWallet is Assertive {
                 transactionListFiltered[i] = transactionListTemp[i];
     }
 
+    // NON-CONSTANT INTERNAL METHODS
+
+    function addTransaction(address destination, uint value, bytes data, uint nonce)
+        private
+        address_not_null(destination)
+        returns (bytes32 txHash)
+    {
+        txHash = sha3(destination, value, data, nonce);
+        if (transactions[txHash].destination == 0) {
+            transactions[txHash] = Transaction({
+                destination: destination,
+                value: value,
+                data: data,
+                nonce: nonce,
+                executed: false
+            });
+            transactionList.push(txHash);
+            Submission(txHash);
+        }
+    }
+
+    function addConfirmation(bytes32 txHash, address owner)
+        private
+        is_not_confirmed(txHash, owner)
+    {
+        confirmations[txHash][owner] = true;
+        Confirmation(owner, txHash);
+    }
+
     // NON-CONSTANT EXTERNAL METHODS
 
     function submitTransaction(address destination, uint value, bytes data, uint nonce)
         external
-        returns (bytes32 transactionHash)
+        returns (bytes32 txHash)
     {
-        transactionHash = addTransaction(destination, value, data, nonce);
-        confirmTransaction(transactionHash);
+        txHash = addTransaction(destination, value, data, nonce);
+        confirmTransaction(txHash);
     }
 
     function submitTransactionWithSignatures(address destination, uint value, bytes data, uint nonce, uint8[] v, bytes32[] rs)
         external
-        returns (bytes32 transactionHash)
+        returns (bytes32 txHash)
     {
-        transactionHash = addTransaction(destination, value, data, nonce);
-        confirmTransactionWithSignatures(transactionHash, v, rs);
+        txHash = addTransaction(destination, value, data, nonce);
+        confirmTransactionWithSignatures(txHash, v, rs);
     }
+
+    function revokeConfirmation(bytes32 txHash)
+        external
+        is_multi_sig_owner(msg.sender)
+        is_confirmed(txHash, msg.sender)
+        transaction_is_not_executed(txHash)
+    {
+        confirmations[txHash][msg.sender] = false;
+        Revocation(msg.sender, txHash);
+    }    
 
     // NON-CONSTANT PUBLIC METHODS
 
-    function confirmTransaction(bytes32 transactionHash)
-        is_owner(msg.sender)
+    function confirmTransaction(bytes32 txHash)
+        is_multi_sig_owner(msg.sender)
     {
-        addConfirmation(transactionHash, msg.sender);
-        executeTransaction(transactionHash);
+        addConfirmation(txHash, msg.sender);
+        if (isConfirmed(txHash))
+            executeTransaction(txHash);
     }
 
-    function confirmTransactionWithSignatures(bytes32 transactionHash, uint8[] v, bytes32[] rs)
-        is_multi_sig_owners_signature(transactionHash, v, rs)
+    function confirmTransactionWithSignatures(bytes32 txHash, uint8[] v, bytes32[] rs)
+        is_multi_sig_owners_signature(txHash, v, rs)
     {
         for (uint i = 0; i < v.length; i++)
-            addConfirmation(transactionHash, ecrecover(transactionHash, v[i], rs[i], rs[i + v.length]));
-        executeTransaction(transactionHash);
+            addConfirmation(txHash, ecrecover(txHash, v[i], rs[i], rs[i + v.length]));
+        if (isConfirmed(txHash))
+            executeTransaction(txHash);
     }
 
-    function revokeConfirmation(bytes32 transactionHash)
-        external
-        is_owner(msg.sender)
-        is_confirmed(transactionHash, msg.sender)
-        transaction_is_not_executed(transactionHash)
+    function executeTransaction(bytes32 txHash)
+        transaction_is_not_executed(txHash)
+        transaction_is_confirmed(txHash)
     {
-        confirmations[transactionHash][msg.sender] = false;
-        Revocation(msg.sender, transactionHash);
-    }
-
-    function executeTransaction(bytes32 transactionHash)
-        transaction_is_not_executed(transactionHash)
-        transaction_is_approved(transactionHash)
-    {
-        Transaction tx = transactions[transactionHash];
+        Transaction tx = transactions[txHash];
         tx.executed = true;
         assert(tx.destination.call.value(tx.value)(tx.data));
-        Execution(transactionHash);
+        Execution(txHash);
     }
 
     function MultiSigWallet(address[] setOwners, uint setRequiredSignatures)
