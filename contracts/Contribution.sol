@@ -13,9 +13,8 @@ contract Contribution is SafeMath {
     // FILEDS
 
     // Constant fields
-    uint public constant ETHER_CAP = 250000 ether; // max amount raised during this contribution; targeted amount CHF 2.5MN
+    uint public constant ETHER_CAP = 250000 ether; // max amount raised during first contribution; targeted amount CHF 2.5MN
     uint public constant MAX_CONTRIBUTION_DURATION = 4 weeks; // max amount in seconds of contribution period
-    uint public constant MAX_TOTAL_VOUCHER_AMOUNT = 1250000; // max amount of total vouchers raised during all contribution periods
     uint public constant BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
     // Price Rates
     uint public constant PRICE_RATE_FIRST = 2000; // Four price tiers, each valid for two weeks
@@ -132,15 +131,16 @@ contract Contribution is SafeMath {
         startTime = setStartTime;
         endTime = startTime + MAX_CONTRIBUTION_DURATION;
         melonVoucher = new MelonVoucher(this, melonport, startTime, endTime); // Create Melon Voucher Contract
+        var maxTotalVoucherAmount = melonVoucher.MAX_TOTAL_VOUCHER_AMOUNT();
         // Mint liquid vouchers for melonport company, liquid means tradeale
-        melonVoucher.mintLiquidVoucher(melonport, MELONPORT_COMPANY_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        melonVoucher.mintLiquidVoucher(melonport, MELONPORT_COMPANY_STAKE * maxTotalVoucherAmount / DIVISOR_STAKE);
         // Mint iced vouchers that are unable to trade for two years and allocate according to relevant stakes
-        melonVoucher.mintIcedVoucher(FOUNDER_ONE, FOUNDER_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-        melonVoucher.mintIcedVoucher(FOUNDER_TWO, FOUNDER_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-        melonVoucher.mintIcedVoucher(EXT_COMPANY_ONE, EXT_COMPANY_STAKE_ONE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-        melonVoucher.mintIcedVoucher(EXT_COMPANY_TWO, EXT_COMPANY_STAKE_TWO * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-        melonVoucher.mintIcedVoucher(ADVISOR_ONE, ADVISOR_STAKE_ONE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-        melonVoucher.mintIcedVoucher(ADVISOR_TWO, ADVISOR_STAKE_TWO * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(FOUNDER_ONE, FOUNDER_STAKE * maxTotalVoucherAmount / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(FOUNDER_TWO, FOUNDER_STAKE * maxTotalVoucherAmount / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(EXT_COMPANY_ONE, EXT_COMPANY_STAKE_ONE * maxTotalVoucherAmount / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(EXT_COMPANY_TWO, EXT_COMPANY_STAKE_TWO * maxTotalVoucherAmount / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(ADVISOR_ONE, ADVISOR_STAKE_ONE * maxTotalVoucherAmount / DIVISOR_STAKE);
+        melonVoucher.mintIcedVoucher(ADVISOR_TWO, ADVISOR_STAKE_TWO * maxTotalVoucherAmount / DIVISOR_STAKE);
     }
 
     /// Pre: Valid signature received from https://contribution.melonport.com

@@ -46,13 +46,13 @@ contract('Contribution', (accounts) => {
 
   // Solidity constants
   const hours = 3600;
-  const weeks = 3600*24*7;
-  const ether = new BigNumber(Math.pow(10,18));
+  const weeks = 24 * 7 * hours;
+  const years = 52 * weeks;
+  const ether = new BigNumber(Math.pow(10, 18));
 
-  // Constant fields
+  // Contribution constant fields
   const ETHER_CAP = 250000 * ether; // max amount raised during this contribution; targeted amount CHF 2.5MN
   const MAX_CONTRIBUTION_DURATION = 4 * weeks; // max amount in seconds of contribution period
-  const MAX_TOTAL_VOUCHER_AMOUNT = 1250000; // max amount of total vouchers raised during all contribution periods
   const BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
   // Price Rates
   const PRICE_RATE_FIRST = 2000; // Four price tiers, each valid for two weeks
@@ -76,17 +76,20 @@ contract('Contribution', (accounts) => {
   const ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon voucher allocated to advisor
   const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon voucher allocated to advisor
 
+  // Melon Voucher constant fields
+  const THAWING_DURATION = 2 * years; // time needed for iced vouchers to thaw into liquid vouchers
+  const MAX_TOTAL_VOUCHER_AMOUNT = 1250000; // max amount of total vouchers raised during all contributions
+
   // Test globals
   let multisigContract;
   let contributionContract;
   let melonContract;
   let testCases;
 
-  // Multisig
+  // Accounts
   const multiSigOwners = accounts.slice(0, 6);
   const requiredSignatures = 4;
-
-  const melonport = accounts[0];
+  let melonport; // defined as multisigContract.address
   const btcs = accounts[1];
   const signer = accounts[2];
 
@@ -98,176 +101,186 @@ contract('Contribution', (accounts) => {
   var timeSpacingTestCases;
 
   var snapshotIds = [];
+  var timeTravelTwoYearForward = 2 * years;
 
-  var timeTravelTwoYearForward = 2 * 52 * weeks;
 
-  before('Check accounts', (done) => {
-    assert.equal(accounts.length, 10);
-    done();
-  });
-
-  beforeEach("Checkpoint, so that we can revert later", (done) => {
-    send("evm_snapshot", (err, result) => {
-      if (!err) {
-        snapshotIds.push(result.id);
-      }
-      done(err);
-    });
-  });
-
-  it('Set startTime as now', (done) => {
-    web3.eth.getBlock('latest', function(err, result) {
-      initalBlockTime = result.timestamp;
-      startTime = initalBlockTime + startDelay;
-      endTime = startTime + 4*weeks;
-      timeSpacingTestCases = (endTime - startTime) / (numTestCases - 1);
+  describe('PREPARATIONS', () => {
+    before('Check accounts', (done) => {
+      assert.equal(accounts.length, 10);
       done();
     });
-  });
 
-  it('Set up test cases', (done) => {
-    testCases = [];
-    for (i = 0; i < numTestCases; i++) {
-      const blockTime = Math.round(startTime + i * timeSpacingTestCases);
-      let expectedPrice;
-      if (blockTime>=startTime && blockTime<startTime + 1*weeks) {
-        expectedPrice = 2000;
-      } else if (blockTime>=startTime + 1*weeks && blockTime < startTime + 2*weeks) {
-        expectedPrice = 1950;
-      } else if (blockTime>=startTime + 2*weeks && blockTime < startTime + 3*weeks) {
-        expectedPrice = 1900;
-      } else if (blockTime>=startTime + 3*weeks && blockTime < endTime) {
-        expectedPrice = 1850;
-      } else {
-        expectedPrice = 0;
+    beforeEach("Checkpoint, so that we can revert later", (done) => {
+      send("evm_snapshot", (err, result) => {
+        if (!err) {
+          snapshotIds.push(result.id);
+        }
+        done(err);
+      });
+    });
+
+    it('Set startTime as now', (done) => {
+      web3.eth.getBlock('latest', function(err, result) {
+        initalBlockTime = result.timestamp;
+        startTime = initalBlockTime + startDelay;
+        endTime = startTime + 4*weeks;
+        timeSpacingTestCases = (endTime - startTime) / (numTestCases - 1);
+        done();
+      });
+    });
+
+    it('Set up test cases', (done) => {
+      testCases = [];
+      for (i = 0; i < numTestCases; i++) {
+        const blockTime = Math.round(startTime + i * timeSpacingTestCases);
+        let expectedPrice;
+        if (blockTime>=startTime && blockTime<startTime + 1*weeks) {
+          expectedPrice = 2000;
+        } else if (blockTime>=startTime + 1*weeks && blockTime < startTime + 2*weeks) {
+          expectedPrice = 1950;
+        } else if (blockTime>=startTime + 2*weeks && blockTime < startTime + 3*weeks) {
+          expectedPrice = 1900;
+        } else if (blockTime>=startTime + 3*weeks && blockTime < endTime) {
+          expectedPrice = 1850;
+        } else {
+          expectedPrice = 0;
+        }
+        const accountNum = Math.max(1, Math.min(i + 1, accounts.length-1));
+        const account = accounts[accountNum];
+        expectedPrice = Math.round(expectedPrice);
+        testCases.push(
+          {
+            accountNum: accountNum,
+            blockTime: blockTime,
+            expectedPrice: expectedPrice,
+            account: account,
+          }
+        );
       }
-      const accountNum = Math.max(1, Math.min(i + 1, accounts.length-1));
-      const account = accounts[accountNum];
-      expectedPrice = Math.round(expectedPrice);
-      testCases.push(
-        {
-          accountNum: accountNum,
-          blockTime: blockTime,
-          expectedPrice: expectedPrice,
-          account: account,
+      done();
+    });
+
+    it('Sign test cases', (done) => {
+      async.mapSeries(testCases,
+        function(testCase, callbackMap) {
+          const hash = '0x' + sha256(new Buffer(testCase.account.slice(2),'hex'));
+          sign(web3, signer, hash, (err, sig) => {
+            testCase.v = sig.v;
+            testCase.r = sig.r;
+            testCase.s = sig.s;
+            callbackMap(null, testCase);
+          });
+        },
+        function(err, newTestCases) {
+          testCases = newTestCases;
+          done();
         }
       );
-    }
-    done();
+    });
   });
 
-  it('Sign test cases', (done) => {
-    async.mapSeries(testCases,
-      function(testCase, callbackMap) {
-        const hash = '0x' + sha256(new Buffer(testCase.account.slice(2),'hex'));
-        sign(web3, signer, hash, (err, sig) => {
-          testCase.v = sig.v;
-          testCase.r = sig.r;
-          testCase.s = sig.s;
-          callbackMap(null, testCase);
-        });
-      },
-      function(err, newTestCases) {
-        testCases = newTestCases;
+  describe('CONTRACT DEPLOYMENT', () => {
+    it('Deploy Multisig wallet', (done) => {
+      MultiSigWallet.new(multiSigOwners, requiredSignatures).then((result) => {
+        multisigContract = result;
+        melonport = multisigContract.address;
+        return multisigContract.requiredSignatures();
+      }).then((result) => {
+        assert.equal(result, requiredSignatures);
         done();
-      }
-    );
-  });
+      });
+    });
 
-  it('Deploy Multisig wallet', (done) => {
-    MultiSigWallet.new(multiSigOwners, requiredSignatures).then((result) => {
-      multisigContract = result;
-      return multisigContract.requiredSignatures();
-    }).then((result) => {
-      assert.equal(result, requiredSignatures);
-      done();
+    it('Deploy Contribution contracts', (done) => {
+      Contribution.new(melonport, btcs, signer, startTime).then((result) => {
+        contributionContract = result;
+        return contributionContract.melonVoucher();
+      }).then((result) => {
+        melonContract = MelonVoucher.at(result);
+        done();
+      });
+    });
+
+    it('Check Melon Voucher initialisation', (done) => {
+      melonContract.MAX_TOTAL_VOUCHER_AMOUNT().then((result) => {
+        assert.equal(result, MAX_TOTAL_VOUCHER_AMOUNT);
+        return melonContract.minter();
+      }).then((result) => {
+        assert.equal(result, contributionContract.address);
+        return melonContract.melonport();
+      }).then((result) => {
+        assert.equal(result, melonport);
+        return melonContract.startTime();
+      }).then((result) => {
+        assert.equal(result, startTime);
+        return melonContract.endTime();
+      }).then((result) => {
+        assert.equal(result, endTime)
+        done();
+      });
+    });
+
+    it('Check premined allocation', (done) => {
+      melonContract.balanceOf(melonport).then((result) => {
+        assert.equal(result.toNumber(), MELONPORT_COMPANY_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        return melonContract.lockedBalanceOf(FOUNDER_ONE);
+      }).then((result) => {
+        assert.equal(result.toNumber(), FOUNDER_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        return melonContract.lockedBalanceOf(FOUNDER_TWO);
+      }).then((result) => {
+        assert.equal(result.toNumber(), FOUNDER_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        return melonContract.lockedBalanceOf(EXT_COMPANY_ONE);
+      }).then((result) => {
+        assert.equal(result.toNumber(), EXT_COMPANY_STAKE_ONE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        return melonContract.lockedBalanceOf(EXT_COMPANY_TWO);
+      }).then((result) => {
+        assert.equal(result.toNumber(), EXT_COMPANY_STAKE_TWO * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        return melonContract.lockedBalanceOf(ADVISOR_ONE);
+      }).then((result) => {
+        assert.equal(result.toNumber(), ADVISOR_STAKE_ONE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        return melonContract.lockedBalanceOf(ADVISOR_TWO);
+      }).then((result) => {
+        assert.equal(result.toNumber(), ADVISOR_STAKE_TWO * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
+        done();
+      })
     });
   });
 
-  it('Deploy Contribution contracts', (done) => {
-    Contribution.new(melonport, btcs, signer, startTime).then((result) => {
-      contributionContract = result;
-      return contributionContract.melonVoucher();
-    }).then((result) => {
-      melonContract = MelonVoucher.at(result);
-      return melonContract.minter()
-    }).then((result) => {
-      assert.equal(result, contributionContract.address);
+  describe('CONTRIBUTION', () => {
+
+    it('Test changing Melonport address', (done) => {
       done();
     });
-  });
 
-  it('Check Melon Voucher initialisation', (done) => {
-    melonContract.minter().then((result) => {
-      assert.equal(result, contributionContract.address);
-      return melonContract.melonport();
-    }).then((result) => {
-      assert.equal(result, melonport);
-      return melonContract.startTime();
-    }).then((result) => {
-      assert.equal(result, startTime);
-      return melonContract.endTime();
-    }).then((result) => {
-      assert.equal(result, endTime)
+    it('Test BTCS access', (done) => {
       done();
     });
+
   });
 
-  it('Check premined allocation', (done) => {
-    melonContract.balanceOf(melonport).then((result) => {
-      assert.equal(result.toNumber(), MELONPORT_COMPANY_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-      return melonContract.lockedBalanceOf(FOUNDER_ONE);
-    }).then((result) => {
-      assert.equal(result.toNumber(), FOUNDER_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-      return melonContract.lockedBalanceOf(FOUNDER_TWO);
-    }).then((result) => {
-      assert.equal(result.toNumber(), FOUNDER_STAKE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-      return melonContract.lockedBalanceOf(EXT_COMPANY_ONE);
-    }).then((result) => {
-      assert.equal(result.toNumber(), EXT_COMPANY_STAKE_ONE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-      return melonContract.lockedBalanceOf(EXT_COMPANY_TWO);
-    }).then((result) => {
-      assert.equal(result.toNumber(), EXT_COMPANY_STAKE_TWO * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-      return melonContract.lockedBalanceOf(ADVISOR_ONE);
-    }).then((result) => {
-      assert.equal(result.toNumber(), ADVISOR_STAKE_ONE * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-      return melonContract.lockedBalanceOf(ADVISOR_TWO);
-    }).then((result) => {
-      assert.equal(result.toNumber(), ADVISOR_STAKE_TWO * MAX_TOTAL_VOUCHER_AMOUNT / DIVISOR_STAKE);
-      done();
-    })
-  });
-
-  it('Test changing Melonport address', (done) => {
-    done();
-  });
-
-  it('Test BTCS access', (done) => {
-    done();
-  });
-
-  it('Time travel one year forward', (done) => {
-    // Adjust time
-    send("evm_increaseTime", [timeTravelTwoYearForward], (err, result) => {
-      if (err) return done(err);
-
-      // Mine a block so new time is recorded.
-      send("evm_mine", (err, result) => {
+  describe('SETTING OF NEW MINTER', () => {
+    it('Time travel two years forward', (done) => {
+      // Adjust time
+      send("evm_increaseTime", [timeTravelTwoYearForward], (err, result) => {
         if (err) return done(err);
 
-        web3.eth.getBlock('latest', (err, block) => {
-          if(err) return done(err)
-          var secondsJumped = block.timestamp - initalBlockTime;
+        // Mine a block so new time is recorded.
+        send("evm_mine", (err, result) => {
+          if (err) return done(err);
 
-          // Somehow it jumps an extra 18 seconds, ish, when run inside the whole
-          // test suite. It might have something to do with when the before block
-          // runs and when the test runs. Likely the last block didn't occur for
-          // awhile.
-          assert(secondsJumped >= timeTravelTwoYearForward)
-          done()
+          web3.eth.getBlock('latest', (err, block) => {
+            if(err) return done(err)
+            var secondsJumped = block.timestamp - initalBlockTime;
+
+            // Somehow it jumps an extra 18 seconds, ish, when run inside the whole
+            // test suite. It might have something to do with when the before block
+            // runs and when the test runs. Likely the last block didn't occur for
+            // awhile.
+            assert(secondsJumped >= timeTravelTwoYearForward)
+            done()
+          })
         })
       })
-    })
+    });
   });
-
 });

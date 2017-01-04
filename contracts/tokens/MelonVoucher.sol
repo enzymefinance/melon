@@ -42,14 +42,14 @@ contract MelonVoucher is ERC20, SafeMath {
         _;
     }
 
-    modifier max_total_voucher_amount_not_reached(uint vouchers) {
-        assert(safeAdd(totalSupply, vouchers) <= MAX_TOTAL_VOUCHER_AMOUNT);
+    modifier max_total_voucher_amount_not_reached(uint amount) {
+        assert(safeAdd(totalSupply, amount) <= MAX_TOTAL_VOUCHER_AMOUNT);
         _;
     }
 
     // CONSTANT METHODS
 
-    function lockedBalanceOf(address _owner) constant returns (uint256 balance) {
+    function lockedBalanceOf(address _owner) constant returns (uint balance) {
         return lockedBalances[_owner];
     }
 
@@ -66,53 +66,53 @@ contract MelonVoucher is ERC20, SafeMath {
 
     /// Pre: Address of Contribution contract (minter) is known
     /// Post: Mints Voucher into liquid tranche
-    function mintLiquidVoucher(address recipient, uint vouchers)
+    function mintLiquidVoucher(address recipient, uint amount)
         external
         only_minter
-        max_total_voucher_amount_not_reached(vouchers)
+        max_total_voucher_amount_not_reached(amount)
     {
-        balances[recipient] = safeAdd(balances[recipient], vouchers);
-        totalSupply = safeAdd(totalSupply, vouchers);
+        balances[recipient] = safeAdd(balances[recipient], amount);
+        totalSupply = safeAdd(totalSupply, amount);
     }
 
     /// Pre: Address of Contribution contract (minter) is known
     /// Post: Mints Voucher into iced tranche. Become liquid after completion of the melonproject or two years.
-    function mintIcedVoucher(address recipient, uint vouchers)
+    function mintIcedVoucher(address recipient, uint amount)
         external
         only_minter
-        max_total_voucher_amount_not_reached(vouchers)
+        max_total_voucher_amount_not_reached(amount)
     {
-        lockedBalances[recipient] = safeAdd(lockedBalances[recipient], vouchers);
-        totalSupply = safeAdd(totalSupply, vouchers);
+        lockedBalances[recipient] = safeAdd(lockedBalances[recipient], amount);
+        totalSupply = safeAdd(totalSupply, amount);
     }
 
     /// Pre: Thawing period has passed - iced funds have turned into liquid ones
     /// Post: All funds available for trade
-    function unlockBalance(address ofContributor)
+    function unlockBalance(address recipient)
         now_past(endTime + THAWING_DURATION)
     {
-        balances[ofContributor] = safeAdd(balances[ofContributor], lockedBalances[ofContributor]);
-        lockedBalances[ofContributor] = 0;
+        balances[recipient] = safeAdd(balances[recipient], lockedBalances[recipient]);
+        lockedBalances[recipient] = 0;
     }
 
     /// Pre: Prevent transfers until contribution period is over.
     /// Post: Transfer MLN from msg.sender
     /// Note: ERC 20 Standard Voucher interface transfer function
-    function transfer(address _to, uint256 _value)
+    function transfer(address recipient, uint amount)
         now_past(endTime)
         returns (bool success)
     {
-        return super.transfer(_to, _value);
+        return super.transfer(recipient, amount);
     }
 
     /// Pre: Prevent transfers until contribution period is over.
     /// Post: Transfer MLN from arbitrary address
     /// Note: ERC 20 Standard Voucher interface transferFrom function
-    function transferFrom(address _from, address _to, uint256 _value)
+    function transferFrom(address sender, address recipient, uint amount)
         now_past(endTime)
         returns (bool success)
     {
-        return super.transferFrom(_from, _to, _value);
+        return super.transferFrom(sender, recipient, amount);
     }
 
     /// Pre: Melonport address is set.
