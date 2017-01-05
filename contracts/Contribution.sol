@@ -30,13 +30,13 @@ contract Contribution is SafeMath {
     address public constant ADVISOR_ONE = 0xA1;
     address public constant ADVISOR_TWO = 0xA2;
     // Stakes of Patrons
-    uint public constant DIVISOR_STAKE = 10000; // Stakes are divided by this number; Results to one basis point
-    uint public constant MELONPORT_COMPANY_STAKE = 1000; // 12% of all created melon voucher allocated to melonport company
+    uint public constant MELONPORT_COMPANY_STAKE = 1000; // 10% of all created melon voucher allocated to melonport company
     uint public constant EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon voucher allocated to external company
     uint public constant EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon voucher allocated to external company
     uint public constant FOUNDER_STAKE = 450; // 4.5% of all created melon voucher allocated to founder
     uint public constant ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon voucher allocated to advisor
     uint public constant ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon voucher allocated to advisor
+    uint public constant DIVISOR_STAKE = 10000; // Stakes are divided by this number; Results to one basis point    
 
     // Fields that are only changed in constructor
     address public melonport; // All deposited ETH will be instantly forwarded to this address.
