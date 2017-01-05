@@ -67,8 +67,7 @@ contract MultiSigWallet is Assertive {
     }
 
     modifier address_not_null(address destination) {
-        //TODO: Test empty input
-        assert(destination != 0);
+        assert(destination != 0 || destination != 0x0);
         _;
     }
 
@@ -118,6 +117,8 @@ contract MultiSigWallet is Assertive {
 
     // NON-CONSTANT INTERNAL METHODS
 
+    /// Pre: Transaction has not already been submited
+    /// Post: New transaction in transactions and transactionList
     function addTransaction(address destination, uint value, bytes data, uint nonce)
         internal
         address_not_null(destination)
@@ -147,7 +148,8 @@ contract MultiSigWallet is Assertive {
 
     // NON-CONSTANT PUBLIC METHODS
 
-    // Methods to submit a transaction
+    /// Pre: Multi sig owner; Transaction has not already been submited
+    /// Post: Transaction confirmed for multi sig owner
     function submitTransaction(address destination, uint value, bytes data, uint nonce)
         returns (bytes32 txHash)
     {
@@ -155,6 +157,8 @@ contract MultiSigWallet is Assertive {
         confirmTransaction(txHash);
     }
 
+    /// Pre: Multi sig owner(s) signature(s); Transaction has not already been submited
+    /// Post: Transaction confirmed for multi sig owner(s)
     function submitTransactionWithSignatures(address destination, uint value, bytes data, uint nonce, uint8[] v, bytes32[] rs)
         returns (bytes32 txHash)
     {
@@ -162,7 +166,8 @@ contract MultiSigWallet is Assertive {
         confirmTransactionWithSignatures(txHash, v, rs);
     }
 
-    // Methods to confirm a given transaction
+    /// Pre: Multi sig owner
+    /// Post: Confirm approval to execute transaction
     function confirmTransaction(bytes32 txHash)
         only_multi_sig_owner
     {
@@ -171,6 +176,8 @@ contract MultiSigWallet is Assertive {
             executeTransaction(txHash);
     }
 
+    /// Pre: Anyone with valid mutli sig owner(s) signature(s)
+    /// Post: Confirms approval to execute transaction of signing multi sig owner(s)
     function confirmTransactionWithSignatures(bytes32 txHash, uint8[] v, bytes32[] rs)
         is_multi_sig_owners_signature(txHash, v, rs)
     {
@@ -180,7 +187,8 @@ contract MultiSigWallet is Assertive {
             executeTransaction(txHash);
     }
 
-    // Method to revoke a given transaction
+    /// Pre: Multi sig owner who has confirmed pending transaction
+    /// Post: Revokes approval of multi sig owner
     function revokeConfirmation(bytes32 txHash)
         only_multi_sig_owner
         msg_sender_has_confirmed(txHash)
@@ -190,7 +198,8 @@ contract MultiSigWallet is Assertive {
         Revocation(msg.sender, txHash);
     }
 
-    // Method to execute a given transaction
+    /// Pre: Multi sig owner quorum has been reached
+    /// Post: Executes transaction from this contract account
     function executeTransaction(bytes32 txHash)
         transaction_is_not_executed(txHash)
         transaction_is_confirmed(txHash)
@@ -201,6 +210,8 @@ contract MultiSigWallet is Assertive {
         Execution(txHash);
     }
 
+    /// Pre: All fields, except { multiSigOwners, requiredSignatures } are valid
+    /// Post: All fields, including { multiSigOwners, requiredSignatures } are valid
     function MultiSigWallet(address[] setOwners, uint setRequiredSignatures)
         valid_amount_of_required_signatures(setOwners.length, setRequiredSignatures)
     {
@@ -210,6 +221,8 @@ contract MultiSigWallet is Assertive {
         requiredSignatures = setRequiredSignatures;
     }
 
+    /// Pre: All fields, including { multiSigOwners, requiredSignatures } are valid
+    /// Post: Received sent funds into wallet
     function() payable { Deposit(msg.sender, msg.value); }
 
 }
