@@ -117,7 +117,7 @@ contract MultiSigWallet is Assertive {
 
     // NON-CONSTANT INTERNAL METHODS
 
-    /// Pre: Transaction has not already been submited
+    /// Pre: Transaction has not already been submitted
     /// Post: New transaction in transactions and transactionList
     function addTransaction(address destination, uint value, bytes data, uint nonce)
         internal
