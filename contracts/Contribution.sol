@@ -145,11 +145,11 @@ contract Contribution is SafeMath {
 
     /// Pre: Valid signature received from https://contribution.melonport.com
     /// Post: Bought melon vouchers according to priceRate() and msg.value
-    function buyLiquid(uint8 v, bytes32 r, bytes32 s) payable { buyLiquidRecipient(msg.sender, v, r, s); }
+    function buy(uint8 v, bytes32 r, bytes32 s) payable { buyRecipient(msg.sender, v, r, s); }
 
     /// Pre: Valid signature received from https://contribution.melonport.com
     /// Post: Bought melon vouchers according to priceRate() and msg.value on behlf of recipient
-    function buyLiquidRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
+    function buyRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer_signature(v, r, s)
         now_at_least(startTime)
@@ -166,7 +166,7 @@ contract Contribution is SafeMath {
 
     /// Pre: BTCS before contribution period, BTCS has exclusiv right to buy up to 25% of all vouchers
     /// Post: Bought melon vouchers according to priceRate() and msg.value on behalf of recipient
-    function btcsBuyLiquidRecipient(address recipient)
+    function btcsBuyRecipient(address recipient)
         payable
         only_btcs
         now_at_most(startTime)

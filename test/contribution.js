@@ -102,7 +102,6 @@ contract('Contribution', (accounts) => {
   var startTime;
   var endTime;
   const numTestCases = 8;
-  var timeSpacingTestCases;
 
   var snapshotIds = [];
   var timeTravelTwoYearForward = 2 * years;
@@ -128,7 +127,7 @@ contract('Contribution', (accounts) => {
         initalBlockTime = result.timestamp;
         startTime = initalBlockTime + startDelay;
         endTime = startTime + 4*weeks;
-        timeSpacingTestCases = (endTime - startTime) / (numTestCases - 1);
+
         done();
       });
     });
@@ -136,7 +135,8 @@ contract('Contribution', (accounts) => {
     it('Set up test cases', (done) => {
       testCases = [];
       for (i = 0; i < numTestCases; i++) {
-        const blockTime = Math.round(startTime + i * timeSpacingTestCases);
+        const timeSpacing = (endTime - startTime) / numTestCases;
+        const blockTime = Math.round(startTime + i * timeSpacing);
         let expectedPrice;
         if (blockTime>=startTime && blockTime<startTime + 1*weeks) {
           expectedPrice = 2000;
@@ -156,6 +156,7 @@ contract('Contribution', (accounts) => {
           {
             accountNum: accountNum,
             blockTime: blockTime,
+            timeSpacing: timeSpacing,
             expectedPrice: expectedPrice,
             account: account,
           }
@@ -277,7 +278,7 @@ contract('Contribution', (accounts) => {
       const testCase = {
         buyer: btcs,
         buy_for_how_much_ether: web3.toWei(2.1, "ether"),
-        recipient_of_melon: accounts[5],
+        recipient_of_melon: accounts[9],
         expected_price: PRICE_RATE_FIRST / DIVISOR_PRICE,
         expected_melon_amount: web3.toWei(2.1, "ether") * PRICE_RATE_FIRST / DIVISOR_PRICE,
       }
@@ -285,7 +286,7 @@ contract('Contribution', (accounts) => {
       web3.eth.getBalance(melonport, (err, result) => {
         const initialBalance = result;
 
-        contributionContract.btcsBuyLiquidRecipient(
+        contributionContract.btcsBuyRecipient(
           testCase.recipient_of_melon,
           { from: testCase.buyer, value: testCase.buy_for_how_much_ether }).then(() => {
           return melonContract.balanceOf(testCase.recipient_of_melon);
@@ -294,14 +295,16 @@ contract('Contribution', (accounts) => {
             result.toNumber(),
             testCase.expected_melon_amount);
           // After contribution period already started
+          //TODO fix spacing
           send("evm_increaseTime", [startDelay], (err, result) => {
-            if (err) return done(err);
-            contributionContract.btcsBuyLiquidRecipient(
+            assert.equal(err, null);
+            contributionContract.btcsBuyRecipient(
               testCase.recipient_of_melon,
               { from: testCase.buyer, value: testCase.buy_for_how_much_ether })
             .then(() => {
               assert.fail();
             }).catch((err) => {
+              console.log(`Err.name: ${err.name}`)
               assert.notEqual(err.name, 'AssertionError');
               web3.eth.getBalance(melonport, (err, result) => {
                 var finalBalance = result;
@@ -318,7 +321,47 @@ contract('Contribution', (accounts) => {
     });
 
     it('Test buy', (done) => {
-      done();
+      //TODO in object
+      var amountToBuy = web3.toWei(2.1, "ether");
+      var amountBought = new BigNumber(0);
+
+      web3.eth.getBalance(melonport, function(err, result){
+        var initialBalance = result;
+        async.eachSeries(testCases,
+          function(testCase, callbackEach) {
+
+            //TODO fix spacing
+            send("evm_increaseTime", [testCase.timeSpacing - 60], (err, result) => {
+              assert.equal(err, null);
+
+              contributionContract.buy(
+                testCase.v, testCase.r, testCase.s,
+                {from: testCase.account, value: amountToBuy })
+              .then(() => {
+                amountBought = amountBought.add(amountToBuy);
+                return melonContract.balanceOf(testCase.account);
+              }).then((result) => {
+                console.log(`Expected Price: ${testCase.expectedPrice}`);
+                assert.equal(
+                  result.toNumber(),
+                  testCase.expectedPrice / DIVISOR_PRICE * amountToBuy
+                );
+                callbackEach();
+              });
+            });
+          },
+          function(err) {
+            web3.eth.getBalance(melonport, function(err, result){
+              var finalBalance = result;
+              assert.equal(
+                finalBalance.minus(initialBalance).toNumber(),
+                amountBought.toNumber()
+              );
+              done();
+            });
+          }
+        );
+      });
     });
 
     it('Test buying on behalf of a recipient', (done) => {
@@ -331,28 +374,6 @@ contract('Contribution', (accounts) => {
   });
 
   describe('SETTING OF NEW MINTER', () => {
-    it('Time travel two years forward', (done) => {
-      // Adjust time
-      send("evm_increaseTime", [timeTravelTwoYearForward], (err, result) => {
-        if (err) return done(err);
 
-        // Mine a block so new time is recorded.
-        send("evm_mine", (err, result) => {
-          if (err) return done(err);
-
-          web3.eth.getBlock('latest', (err, block) => {
-            if(err) return done(err)
-            var secondsJumped = block.timestamp - initalBlockTime;
-
-            // Somehow it jumps an extra 18 seconds, ish, when run inside the whole
-            // test suite. It might have something to do with when the before block
-            // runs and when the test runs. Likely the last block didn't occur for
-            // awhile.
-            assert(secondsJumped >= timeTravelTwoYearForward)
-            done()
-          })
-        })
-      })
-    });
   });
 });
