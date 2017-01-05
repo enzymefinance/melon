@@ -118,7 +118,7 @@ contract MultiSigWallet is Assertive {
     // NON-CONSTANT INTERNAL METHODS
 
     /// Pre: Transaction has not already been submitted
-    /// Post: New transaction in transactions and transactionList
+    /// Post: New transaction in transactions and transactionList fields
     function addTransaction(address destination, uint value, bytes data, uint nonce)
         internal
         address_not_null(destination)
@@ -138,6 +138,8 @@ contract MultiSigWallet is Assertive {
         }
     }
 
+    /// Pre: Transaction has not already been approved by msg.sender
+    /// Post: Transaction w transaction hash: txHash approved by msg.sender
     function addConfirmation(bytes32 txHash, address owner)
         internal
         msg_sender_has_not_confirmed(txHash)
