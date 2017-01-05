@@ -36,7 +36,7 @@ contract Contribution is SafeMath {
     uint public constant FOUNDER_STAKE = 450; // 4.5% of all created melon voucher allocated to founder
     uint public constant ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon voucher allocated to advisor
     uint public constant ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon voucher allocated to advisor
-    uint public constant DIVISOR_STAKE = 10000; // Stakes are divided by this number; Results to one basis point    
+    uint public constant DIVISOR_STAKE = 10000; // Stakes are divided by this number; Results to one basis point
 
     // Fields that are only changed in constructor
     address public melonport; // All deposited ETH will be instantly forwarded to this address.
@@ -148,7 +148,7 @@ contract Contribution is SafeMath {
     function buy(uint8 v, bytes32 r, bytes32 s) payable { buyRecipient(msg.sender, v, r, s); }
 
     /// Pre: Valid signature received from https://contribution.melonport.com
-    /// Post: Bought melon vouchers according to priceRate() and msg.value on behlf of recipient
+    /// Post: Bought melon vouchers according to priceRate() and msg.value on behalf of recipient
     function buyRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer_signature(v, r, s)
