@@ -13,9 +13,9 @@ contract Contribution is SafeMath {
     // FILEDS
 
     // Constant fields
-    uint public constant ETHER_CAP = 250000 ether; // max amount raised during first contribution; targeted amount CHF 2.5MN
-    uint public constant MAX_CONTRIBUTION_DURATION = 4 weeks; // max amount in seconds of contribution period
-    uint public constant BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
+    uint public constant ETHER_CAP = 250000 ether; // Max amount raised during first contribution; targeted amount CHF 2.5MN
+    uint public constant MAX_CONTRIBUTION_DURATION = 4 weeks; // Max amount in seconds of contribution period
+    uint public constant BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // Max melon voucher allocation for btcs before contribution period starts
     // Price Rates
     uint public constant PRICE_RATE_FIRST = 2000; // Four price tiers, each valid for two weeks
     uint public constant PRICE_RATE_SECOND = 1950;
@@ -30,7 +30,7 @@ contract Contribution is SafeMath {
     address public constant ADVISOR_ONE = 0xA1;
     address public constant ADVISOR_TWO = 0xA2;
     // Stakes of Patrons
-    uint public constant DIVISOR_STAKE = 10000; // stakes are divided by this number; results to one basis point
+    uint public constant DIVISOR_STAKE = 10000; // Stakes are divided by this number; Results to one basis point
     uint public constant MELONPORT_COMPANY_STAKE = 1000; // 12% of all created melon voucher allocated to melonport company
     uint public constant EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon voucher allocated to external company
     uint public constant EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon voucher allocated to external company
@@ -40,15 +40,15 @@ contract Contribution is SafeMath {
 
     // Fields that are only changed in constructor
     address public melonport; // All deposited ETH will be instantly forwarded to this address.
-    address public btcs; // Bitcoin Suisse allocation option
-    address public signer; // signer address see function() {} for comments
-    uint public startTime; // contribution start time in seconds
-    uint public endTime; // contribution end time in seconds
+    address public btcs; // Bitcoin Suisse address for their allocation option
+    address public signer; // Signer address as on https://contribution.melonport.com
+    uint public startTime; // Contribution start time in seconds
+    uint public endTime; // Contribution end time in seconds
     MelonVoucher public melonVoucher; // Contract of the ERC20 compliant melon voucher
 
     // Fields that can be changed by functions
-    uint public etherRaised; // this will keep track of the Ether raised during the contribution
-    bool public halted; // the melonport address can set this to true to halt the contribution due to an emergency
+    uint public etherRaised; // This will keep track of the Ether raised during the contribution
+    bool public halted; // The melonport address can set this to true to halt the contribution due to an emergency
 
     // EVENTS
 
@@ -105,7 +105,7 @@ contract Contribution is SafeMath {
     // CONSTANT METHODS
 
     /// Pre: startTime, endTime specified in constructor,
-    /// Post: Liquid rate, one ether equals a combined total of priceRate() / DIVISOR_PRICE of melon vouchers
+    /// Post: Price rate at given blockTime; One ether equals priceRate() / DIVISOR_PRICE of melon vouchers
     function priceRate() constant returns (uint) {
         // Four price tiers
         if (startTime <= now && now < startTime + 1 weeks)
@@ -164,8 +164,8 @@ contract Contribution is SafeMath {
         VouchersBought(recipient, msg.value, amount);
     }
 
-    /// Pre: BTCS before contribution period, BTCS has exclusiv right to buy up to 25% of all vouchers
-    /// Post: Bought melon vouchers according to priceRate() and msg.value on behalf of recipient
+    /// Pre: BTCS before contribution period, BTCS has exclusive right to buy up to 25% of all melon vouchers
+    /// Post: Bought melon vouchers according to PRICE_RATE_FIRST and msg.value on behalf of recipient
     function btcsBuyRecipient(address recipient)
         payable
         only_btcs

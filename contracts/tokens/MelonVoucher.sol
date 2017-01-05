@@ -13,14 +13,14 @@ contract MelonVoucher is ERC20, SafeMath {
     string public constant name = "Melon Voucher";
     string public constant symbol = "MLN";
     uint public constant decimals = 18;
-    uint public constant THAWING_DURATION = 2 years; // time needed for iced vouchers to thaw into liquid vouchers
-    uint public constant MAX_TOTAL_VOUCHER_AMOUNT = 1250000 * 10 ** decimals; // max amount of total vouchers raised during all contributions
+    uint public constant THAWING_DURATION = 2 years; // Time needed for iced vouchers to thaw into liquid vouchers
+    uint public constant MAX_TOTAL_VOUCHER_AMOUNT = 1250000 * 10 ** decimals; // Max amount of total vouchers raised during all contributions
 
     // Fields that are only changed in constructor
     address public minter; // Contribution contract(s)
     address public melonport; // Can change to other minting contribution contracts but only until total amount of voucher minted
-    uint public startTime; // contribution start block (set in constructor)
-    uint public endTime; // contribution end block (set in constructor)
+    uint public startTime; // Contribution start time in seconds
+    uint public endTime; // Contribution end time in seconds
 
     // Fields that can be changed by functions
     mapping (address => uint) lockedBalances;
@@ -64,8 +64,8 @@ contract MelonVoucher is ERC20, SafeMath {
         endTime = setEndTime;
     }
 
-    /// Pre: Address of Contribution contract (minter) is known
-    /// Post: Mints Voucher into liquid tranche
+    /// Pre: Address of contribution contract (minter) is set
+    /// Post: Mints voucher into tradeable tranche
     function mintLiquidVoucher(address recipient, uint amount)
         external
         only_minter
@@ -75,7 +75,7 @@ contract MelonVoucher is ERC20, SafeMath {
         totalSupply = safeAdd(totalSupply, amount);
     }
 
-    /// Pre: Address of Contribution contract (minter) is known
+    /// Pre: Address of contribution contract (minter) is set
     /// Post: Mints Voucher into iced tranche. Become liquid after completion of the melonproject or two years.
     function mintIcedVoucher(address recipient, uint amount)
         external
@@ -97,7 +97,7 @@ contract MelonVoucher is ERC20, SafeMath {
 
     /// Pre: Prevent transfers until contribution period is over.
     /// Post: Transfer MLN from msg.sender
-    /// Note: ERC 20 Standard Voucher interface transfer function
+    /// Note: ERC20 interface
     function transfer(address recipient, uint amount)
         now_past(endTime)
         returns (bool success)
@@ -107,7 +107,7 @@ contract MelonVoucher is ERC20, SafeMath {
 
     /// Pre: Prevent transfers until contribution period is over.
     /// Post: Transfer MLN from arbitrary address
-    /// Note: ERC 20 Standard Voucher interface transferFrom function
+    /// Note: ERC20 interface
     function transferFrom(address sender, address recipient, uint amount)
         now_past(endTime)
         returns (bool success)
@@ -117,6 +117,6 @@ contract MelonVoucher is ERC20, SafeMath {
 
     /// Pre: Melonport address is set.
     /// Post: New minter can now create vouchers up to MAX_TOTAL_VOUCHER_AMOUNT.
-    /// Note: This allows additional contribution periods at a later stage, while stile using the same ERC20 compliant voucher contract.
+    /// Note: This allows additional contribution periods at a later stage, while stile using the same ERC20 compliant contract.
     function changeMintingAddress(address newAddress) only_melonport { minter = newAddress; }
 }
