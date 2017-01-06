@@ -69,17 +69,17 @@ contract('Contribution', (accounts) => {
   const ADVISOR_TWO = 0xA2;
   // Stakes of Patrons
   const DIVISOR_STAKE = 10000; // stakes are divided by this number; results to one basis point
-  const MELONPORT_COMPANY_STAKE = 1000; // 12% of all created melon voucher allocated to melonport company
-  const EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon voucher allocated to external company
-  const EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon voucher allocated to external company
-  const FOUNDER_STAKE = 450; // 4.5% of all created melon voucher allocated to founder
-  const ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon voucher allocated to advisor
-  const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon voucher allocated to advisor
+  const MELONPORT_COMPANY_STAKE = 1000; // 12% of all created melon token allocated to melonport company
+  const EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon token allocated to external company
+  const EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon token allocated to external company
+  const FOUNDER_STAKE = 450; // 4.5% of all created melon token allocated to founder
+  const ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon token allocated to advisor
+  const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon token allocated to advisor
 
-  // Melon Voucher constant fields
+  // Melon Token constant fields
   const decimals = 18;
-  const THAWING_DURATION = 2 * years; // time needed for iced vouchers to thaw into liquid vouchers
-  const MAX_TOTAL_VOUCHER_AMOUNT = 1250000 * (new BigNumber(Math.pow(10, decimals))); // max amount of total vouchers raised during all contributions
+  const THAWING_DURATION = 2 * years; // time needed for iced tokens to thaw into liquid tokens
+  const MAX_TOTAL_TOKEN_AMOUNT = 1250000 * (new BigNumber(Math.pow(10, decimals))); // max amount of total tokens raised during all contributions
 
   const MAX_TOTAL_MLN_AMOUNT = 1250000
   const mln = new BigNumber(Math.pow(10, decimals))
@@ -199,16 +199,16 @@ contract('Contribution', (accounts) => {
     it('Deploy Contribution contracts', (done) => {
       Contribution.new(melonport, btcs, signer, startTime).then((result) => {
         contributionContract = result;
-        return contributionContract.melonVoucher();
+        return contributionContract.melonToken();
       }).then((result) => {
-        melonContract = MelonVoucher.at(result);
+        melonContract = MelonToken.at(result);
         done();
       });
     });
 
-    it('Check Melon Voucher initialisation', (done) => {
-      melonContract.MAX_TOTAL_VOUCHER_AMOUNT().then((result) => {
-        assert.equal(result, MAX_TOTAL_VOUCHER_AMOUNT);
+    it('Check Melon Token initialisation', (done) => {
+      melonContract.MAX_TOTAL_TOKEN_AMOUNT().then((result) => {
+        assert.equal(result, MAX_TOTAL_TOKEN_AMOUNT);
         return melonContract.minter();
       }).then((result) => {
         assert.equal(result, contributionContract.address);

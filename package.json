@@ -1,7 +1,7 @@
 {
-  "name": "melonvoucher",
+  "name": "melontoken",
   "version": "0.0.1",
-  "description": "Voucher contracts of the Melon contribution.",
+  "description": "Token contracts of the Melon contribution.",
   "author": "Melonport AG",
   "license": "MIT",
   "dependencies": {
