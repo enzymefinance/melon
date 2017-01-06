@@ -87,18 +87,13 @@ contract Contribution is SafeMath {
         _;
     }
 
-    modifier now_at_least(uint x) {
+    modifier is_not_earlier_than(uint x) {
         assert(now >= x);
         _;
     }
 
-    modifier now_past(uint x) {
-        assert(now > x);
-        _;
-    }
-
-    modifier now_at_most(uint x) {
-        assert(now <= x);
+    modifier is_earlier_than(uint x) {
+        assert(now < x);
         _;
     }
 
@@ -116,8 +111,8 @@ contract Contribution is SafeMath {
             return PRICE_RATE_THIRD;
         if (startTime + 3 weeks <= now && now < endTime)
             return PRICE_RATE_FOURTH;
-        // Before or after contribution period
-        return 0;
+        // Should not be called before or after contribution period
+        assert(false);
     }
 
     // NON-CONSTANT METHODS
@@ -152,8 +147,8 @@ contract Contribution is SafeMath {
     function buyRecipient(address recipient, uint8 v, bytes32 r, bytes32 s)
         payable
         is_signer_signature(v, r, s)
-        now_at_least(startTime)
-        now_at_most(endTime)
+        is_not_earlier_than(startTime)
+        is_earlier_than(endTime)
         is_not_halted
         ether_cap_not_reached
     {
@@ -169,7 +164,7 @@ contract Contribution is SafeMath {
     function btcsBuyRecipient(address recipient)
         payable
         only_btcs
-        now_at_most(startTime)
+        is_earlier_than(startTime)
         is_not_halted
         btcs_ether_cap_not_reached
     {

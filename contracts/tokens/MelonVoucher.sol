@@ -37,7 +37,7 @@ contract MelonVoucher is ERC20, SafeMath {
         _;
     }
 
-    modifier now_past(uint x) {
+    modifier is_later_than(uint x) {
         assert(now > x);
         _;
     }
@@ -89,7 +89,7 @@ contract MelonVoucher is ERC20, SafeMath {
     /// Pre: Thawing period has passed - iced funds have turned into liquid ones
     /// Post: All funds available for trade
     function unlockBalance(address recipient)
-        now_past(endTime + THAWING_DURATION)
+        is_later_than(endTime + THAWING_DURATION)
     {
         balances[recipient] = safeAdd(balances[recipient], lockedBalances[recipient]);
         lockedBalances[recipient] = 0;
@@ -99,7 +99,7 @@ contract MelonVoucher is ERC20, SafeMath {
     /// Post: Transfer MLN from msg.sender
     /// Note: ERC20 interface
     function transfer(address recipient, uint amount)
-        now_past(endTime)
+        is_later_than(endTime)
         returns (bool success)
     {
         return super.transfer(recipient, amount);
@@ -109,7 +109,7 @@ contract MelonVoucher is ERC20, SafeMath {
     /// Post: Transfer MLN from arbitrary address
     /// Note: ERC20 interface
     function transferFrom(address sender, address recipient, uint amount)
-        now_past(endTime)
+        is_later_than(endTime)
         returns (bool success)
     {
         return super.transferFrom(sender, recipient, amount);
