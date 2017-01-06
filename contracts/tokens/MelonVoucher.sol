@@ -117,6 +117,6 @@ contract MelonVoucher is ERC20, SafeMath {
 
     /// Pre: Melonport address is set.
     /// Post: New minter can now create vouchers up to MAX_TOTAL_VOUCHER_AMOUNT.
-    /// Note: This allows additional contribution periods at a later stage, while stile using the same ERC20 compliant contract.
+    /// Note: This allows additional contribution periods at a later stage, while still using the same ERC20 compliant contract.
     function changeMintingAddress(address newAddress) only_melonport { minter = newAddress; }
 }

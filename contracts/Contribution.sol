@@ -58,7 +58,7 @@ contract Contribution is SafeMath {
 
     modifier is_signer_signature(uint8 v, bytes32 r, bytes32 s) {
         bytes32 hash = sha256(msg.sender);
-        assert(ecrecover(hash,v,r,s) == signer);
+        assert(ecrecover(hash, v, r, s) == signer);
         _;
     }
 

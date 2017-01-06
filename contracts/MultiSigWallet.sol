@@ -21,14 +21,14 @@ contract MultiSigWallet is Assertive {
     // FILEDS
 
     // Fields that are only changed in constructor
-    address[] multiSigOwners; // Address with signing authority
+    address[] multiSigOwners; // Addresses with signing authority
     mapping (address => bool) public isMultiSigOwner; // Has address siging authority
-    uint public requiredSignatures; // Number of signatures required to execute a transaction
+    uint public requiredSignatures; // Number of required signatures to execute a transaction
 
     // Fields that can be changed by functions
     bytes32[] transactionList; // Array of transactions hashes
-    mapping (bytes32 => Transaction) public transactions; // Maps transaction hash [bytes32[ to Transaction [struct]
-    mapping (bytes32 => mapping (address => bool)) public confirmations; // Whether [bool] transaction hash [bytes32] has been confirmed by by owner [address]
+    mapping (bytes32 => Transaction) public transactions; // Maps transaction hash [bytes32[ to a Transaction [struct]
+    mapping (bytes32 => mapping (address => bool)) public confirmations; // Whether [bool] transaction hash [bytes32] has been confirmed by owner [address]
 
     // EVENTS
 
@@ -40,9 +40,9 @@ contract MultiSigWallet is Assertive {
 
     // MODIFIERS
 
-    modifier is_multi_sig_owners_signature(bytes32 txHash, uint8[] v, bytes32[] rs) {
+    modifier is_multi_sig_owners_signature(bytes32 txHash, uint8[] v, bytes32[] r, bytes32[] s) {
         for (uint i = 0; i < v.length; i++)
-            assert(isMultiSigOwner[ecrecover(txHash, v[i], rs[i], rs[v.length + i])]);
+            assert(isMultiSigOwner[ecrecover(txHash, v[i], r[i], s[i])]);
         _;
     }
 
@@ -161,11 +161,11 @@ contract MultiSigWallet is Assertive {
 
     /// Pre: Multi sig owner(s) signature(s); Transaction has not already been submited
     /// Post: Transaction confirmed for multi sig owner(s)
-    function submitTransactionWithSignatures(address destination, uint value, bytes data, uint nonce, uint8[] v, bytes32[] rs)
+    function submitTransactionWithSignatures(address destination, uint value, bytes data, uint nonce, uint8[] v, bytes32[] r, bytes32[] s)
         returns (bytes32 txHash)
     {
         txHash = addTransaction(destination, value, data, nonce);
-        confirmTransactionWithSignatures(txHash, v, rs);
+        confirmTransactionWithSignatures(txHash, v, r, s);
     }
 
     /// Pre: Multi sig owner
@@ -180,11 +180,11 @@ contract MultiSigWallet is Assertive {
 
     /// Pre: Anyone with valid mutli sig owner(s) signature(s)
     /// Post: Confirms approval to execute transaction of signing multi sig owner(s)
-    function confirmTransactionWithSignatures(bytes32 txHash, uint8[] v, bytes32[] rs)
-        is_multi_sig_owners_signature(txHash, v, rs)
+    function confirmTransactionWithSignatures(bytes32 txHash, uint8[] v, bytes32[] r, bytes32[] s)
+        is_multi_sig_owners_signature(txHash, v, r, s)
     {
         for (uint i = 0; i < v.length; i++)
-            addConfirmation(txHash, ecrecover(txHash, v[i], rs[i], rs[i + v.length]));
+            addConfirmation(txHash, ecrecover(txHash, v[i], r[i], s[i]));
         if (isConfirmed(txHash))
             executeTransaction(txHash);
     }
