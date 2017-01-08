@@ -39,7 +39,7 @@ After installation is complete, go to the above `melon` directory, open a termin
 
 1. Launch a ethereum client. For example something similar to this:
     ```
-    parity --chain ropsten --author <some address> --unlock <some address> --password <some password file>
+    parity --chain ropsten --author <some address> --unlock <some address> --password <some password file> --geth
     ```
 
 2. Open a second terminal and deploy contracts using truffle
