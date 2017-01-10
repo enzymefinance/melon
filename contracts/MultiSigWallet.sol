@@ -40,12 +40,6 @@ contract MultiSigWallet is Assertive {
 
     // MODIFIERS
 
-    modifier is_multi_sig_owners_signature(bytes32 txHash, uint8[] v, bytes32[] r, bytes32[] s) {
-        for (uint i = 0; i < v.length; i++)
-            assert(isMultiSigOwner[ecrecover(txHash, v[i], r[i], s[i])]);
-        _;
-    }
-
     modifier only_multi_sig_owner {
         assert(isMultiSigOwner[msg.sender]);
         _;
@@ -177,13 +171,17 @@ contract MultiSigWallet is Assertive {
             executeTransaction(txHash);
     }
 
-    /// Pre: Anyone with valid mutli sig owner(s) signature(s)
+    /// Pre: Anyone even non multi sig owner
     /// Post: Confirms approval to execute transaction of signing multi sig owner(s)
     function confirmTransactionWithSignatures(bytes32 txHash, uint8[] v, bytes32[] r, bytes32[] s)
-        is_multi_sig_owners_signature(txHash, v, r, s)
     {
+        // Add valid multi sig owner(s) signature(s) to confirmations
         for (uint i = 0; i < v.length; i++)
-            addConfirmation(txHash, ecrecover(txHash, v[i], r[i], s[i]));
+        {
+            address owner = ecrecover(txHash, v[i], r[i], s[i]);
+            assert(isMultiSigOwner[owner]);
+            addConfirmation(txHash, owner);
+        }
         if (isConfirmed(txHash))
             executeTransaction(txHash);
     }
