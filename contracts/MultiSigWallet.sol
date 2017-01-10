@@ -51,13 +51,13 @@ contract MultiSigWallet is Assertive {
         _;
     }
 
-    modifier msg_sender_has_confirmed(bytes32 txHash) {
-        assert(confirmations[txHash][msg.sender]);
+    modifier owner_has_confirmed(bytes32 txHash, address owner) {
+        assert(confirmations[txHash][owner]);
         _;
     }
 
-    modifier msg_sender_has_not_confirmed(bytes32 txHash) {
-        assert(!confirmations[txHash][msg.sender]);
+    modifier owner_has_not_confirmed(bytes32 txHash, address owner) {
+        assert(!confirmations[txHash][owner]);
         _;
     }
 
@@ -67,12 +67,11 @@ contract MultiSigWallet is Assertive {
     }
 
     modifier address_not_null(address destination) {
-        assert(destination != 0 || destination != 0x0);
+        assert(destination != 0);
         _;
     }
 
     modifier valid_amount_of_required_signatures(uint ownerCount, uint required) {
-        assert(ownerCount != 0);
         assert(required != 0);
         assert(required <= ownerCount);
         _;
@@ -85,13 +84,13 @@ contract MultiSigWallet is Assertive {
 
     // CONSTANT METHODS
 
-    function isConfirmed(bytes32 txHash) constant returns (bool) { return requiredSignatures <= confirmationCount(txHash); }
-
-    function confirmationCount(bytes32 txHash) constant returns (uint count)
+    function isConfirmed(bytes32 txHash) constant returns (bool)
     {
-        for (uint i = 0; i < multiSigOwners.length; i++)
+        uint count = 0;
+        for (uint i = 0; i < multiSigOwners.length && count < requiredSignatures; i++)
             if (confirmations[txHash][multiSigOwners[i]])
                 count += 1;
+        return requiredSignatures <= count;
     }
 
     function getPendingTransactions() constant returns (bytes32[]) { return filterTransactions(true); }
@@ -142,7 +141,7 @@ contract MultiSigWallet is Assertive {
     /// Post: Transaction w transaction hash: txHash approved by msg.sender
     function addConfirmation(bytes32 txHash, address owner)
         internal
-        msg_sender_has_not_confirmed(txHash)
+        owner_has_not_confirmed(txHash, owner)
     {
         confirmations[txHash][owner] = true;
         Confirmation(owner, txHash);
@@ -193,7 +192,7 @@ contract MultiSigWallet is Assertive {
     /// Post: Revokes approval of multi sig owner
     function revokeConfirmation(bytes32 txHash)
         only_multi_sig_owner
-        msg_sender_has_confirmed(txHash)
+        owner_has_confirmed(txHash, msg.sender)
         transaction_is_not_executed(txHash)
     {
         confirmations[txHash][msg.sender] = false;
