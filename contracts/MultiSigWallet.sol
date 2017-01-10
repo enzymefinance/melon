@@ -6,6 +6,7 @@ import "./dependencies/Assertive.sol";
 /// @author Melonport AG <team@melonport.com>
 /// @notice Allows multiple owners to agree on any given transaction before execution
 /// @notice Inspired by https://github.com/ethereum/dapp-bin/blob/master/wallet/wallet.sol
+/// @notice Only to be used for Ethereum addresses that are used uniquely for this Multi Sig Wallet!
 contract MultiSigWallet is Assertive {
 
     // TYPES
