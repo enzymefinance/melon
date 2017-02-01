@@ -61,20 +61,32 @@ contract('Contribution', (accounts) => {
   const PRICE_RATE_FOURTH = 1850;
   const DIVISOR_PRICE = 1000; // Price rates are divided by this number
   // Addresses of Patrons
-  const FOUNDER_ONE = 0xF1;
+  const FOUNDER_ONE = '0x8cb08267c381d6339cab49b7bafacc9ce5a503a0';
   const FOUNDER_TWO = 0xF2;
   const EXT_COMPANY_ONE = 0xC1;
   const EXT_COMPANY_TWO = 0xC2;
+  const EXT_COMPANY_THREE = 0xC3;
   const ADVISOR_ONE = 0xA1;
-  const ADVISOR_TWO = 0xA2;
+  const ADVISOR_TWO = '0x715a70a7c7d76acc8d5874862e381c1940c19cce';
+  const ADVISOR_THREE = 0xA3;
+  const AMBASSADOR_ONE = 0xE1;
+  const AMBASSADOR_TWO = 0xE2;
+  const AMBASSADOR_THREE = 0xE3;
+  const AMBASSADOR_FOUR = 0xE4;
+  const AMBASSADOR_FIVE = 0xE5;
+  const AMBASSADOR_SIX = 0xE6;
+  const AMBASSADOR_SEVEN = 0xE7;
   // Stakes of Patrons
-  const DIVISOR_STAKE = 10000; // stakes are divided by this number; results to one basis point
-  const MELONPORT_COMPANY_STAKE = 1000; // 12% of all created melon token allocated to melonport company
+  const MELONPORT_COMPANY_STAKE = 1000; // 10% of all created melon token allocated to melonport company
+  const FOUNDER_STAKE = 465; // 4.65% of all created melon token allocated to founder
   const EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon token allocated to external company
   const EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon token allocated to external company
-  const FOUNDER_STAKE = 450; // 4.5% of all created melon token allocated to founder
+  const EXT_COMPANY_STAKE_THREE = 50; // 0.5% of all created melon token allocated to external company
   const ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon token allocated to advisor
   const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon token allocated to advisor
+  const ADVISOR_STAKE_THREE = 10; // 0.1% of all created melon token allocated to advisor
+  const AMBASSADOR_STAKE = 5; // 0.05% of all created melon token allocated to ambassadors
+  const DIVISOR_STAKE = 10000; // Stakes are divided by this number; Results to one basis point
 
   // Melon Token constant fields
   const decimals = 18;
@@ -255,6 +267,12 @@ contract('Contribution', (accounts) => {
           result.toNumber(),
           EXT_COMPANY_STAKE_TWO * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
         );
+        return melonContract.lockedBalanceOf(EXT_COMPANY_THREE);
+      }).then((result) => {
+        assert.equal(
+          result.toNumber(),
+          EXT_COMPANY_STAKE_THREE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
         return melonContract.lockedBalanceOf(ADVISOR_ONE);
       }).then((result) => {
         assert.equal(
@@ -266,6 +284,54 @@ contract('Contribution', (accounts) => {
         assert.equal(
           result.toNumber(),
           ADVISOR_STAKE_TWO * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
+        return melonContract.lockedBalanceOf(ADVISOR_THREE);
+      }).then((result) => {
+        assert.equal(
+          result.toNumber(),
+          ADVISOR_STAKE_THREE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
+        return melonContract.lockedBalanceOf(AMBASSADOR_ONE);
+      }).then((result) => {
+        assert.equal(
+          result.toNumber(),
+          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
+        return melonContract.lockedBalanceOf(AMBASSADOR_TWO);
+      }).then((result) => {
+        assert.equal(
+          result.toNumber(),
+          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
+        return melonContract.lockedBalanceOf(AMBASSADOR_THREE);
+      }).then((result) => {
+        assert.equal(
+          result.toNumber(),
+          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
+        return melonContract.lockedBalanceOf(AMBASSADOR_FOUR);
+      }).then((result) => {
+        assert.equal(
+          result.toNumber(),
+          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
+        return melonContract.lockedBalanceOf(AMBASSADOR_FIVE);
+      }).then((result) => {
+        assert.equal(
+          result.toNumber(),
+          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
+        return melonContract.lockedBalanceOf(AMBASSADOR_SIX);
+      }).then((result) => {
+        assert.equal(
+          result.toNumber(),
+          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+        );
+        return melonContract.lockedBalanceOf(AMBASSADOR_SEVEN);
+      }).then((result) => {
+        assert.equal(
+          result.toNumber(),
+          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
         );
         done();
       })
@@ -304,6 +370,7 @@ contract('Contribution', (accounts) => {
             .then(() => {
               assert.fail();
             }).catch((err) => {
+              // TODO check this again
               console.log(`Err.name: ${err.name}`)
               assert.notEqual(err.name, 'AssertionError');
               web3.eth.getBalance(melonport, (err, result) => {

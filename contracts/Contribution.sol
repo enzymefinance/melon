@@ -23,19 +23,31 @@ contract Contribution is SafeMath {
     uint public constant PRICE_RATE_FOURTH = 1850;
     uint public constant DIVISOR_PRICE = 1000; // Price rates are divided by this number
     // Addresses of Patrons
-    address public constant FOUNDER_ONE = 0xF1;
+    address public constant FOUNDER_ONE = 0x8cb08267c381d6339cab49b7bafacc9ce5a503a0;
     address public constant FOUNDER_TWO = 0xF2;
     address public constant EXT_COMPANY_ONE = 0xC1;
     address public constant EXT_COMPANY_TWO = 0xC2;
+    address public constant EXT_COMPANY_THREE = 0xC3;
     address public constant ADVISOR_ONE = 0xA1;
-    address public constant ADVISOR_TWO = 0xA2;
+    address public constant ADVISOR_TWO = 0x715a70a7c7d76acc8d5874862e381c1940c19cce;
+    address public constant ADVISOR_THREE = 0xA3;
+    address public constant AMBASSADOR_ONE = 0xE1;
+    address public constant AMBASSADOR_TWO = 0xE2;
+    address public constant AMBASSADOR_THREE = 0xE3;
+    address public constant AMBASSADOR_FOUR = 0xE4;
+    address public constant AMBASSADOR_FIVE = 0xE5;
+    address public constant AMBASSADOR_SIX = 0xE6;
+    address public constant AMBASSADOR_SEVEN = 0xE7;
     // Stakes of Patrons
     uint public constant MELONPORT_COMPANY_STAKE = 1000; // 10% of all created melon token allocated to melonport company
+    uint public constant FOUNDER_STAKE = 465; // 4.65% of all created melon token allocated to founder
     uint public constant EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon token allocated to external company
     uint public constant EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon token allocated to external company
-    uint public constant FOUNDER_STAKE = 450; // 4.5% of all created melon token allocated to founder
+    uint public constant EXT_COMPANY_STAKE_THREE = 50; // 0.5% of all created melon token allocated to external company
     uint public constant ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon token allocated to advisor
     uint public constant ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon token allocated to advisor
+    uint public constant ADVISOR_STAKE_THREE = 10; // 0.1% of all created melon token allocated to advisor
+    uint public constant AMBASSADOR_STAKE = 5; // 0.05% of all created melon token allocated to ambassadors
     uint public constant DIVISOR_STAKE = 10000; // Stakes are divided by this number; Results to one basis point
 
     // Fields that are only changed in constructor
@@ -127,15 +139,25 @@ contract Contribution is SafeMath {
         endTime = startTime + MAX_CONTRIBUTION_DURATION;
         melonToken = new MelonToken(this, melonport, startTime, endTime); // Create Melon Token Contract
         var maxTotalTokenAmount = melonToken.MAX_TOTAL_TOKEN_AMOUNT();
+        uint stakeMultiplier = maxTotalTokenAmount / DIVISOR_STAKE;
         // Mint liquid tokens for melonport company, liquid means tradeale
-        melonToken.mintLiquidToken(melonport, MELONPORT_COMPANY_STAKE * maxTotalTokenAmount / DIVISOR_STAKE);
+        melonToken.mintLiquidToken(melonport,       MELONPORT_COMPANY_STAKE * stakeMultiplier);
         // Mint iced tokens that are unable to trade for two years and allocate according to relevant stakes
-        melonToken.mintIcedToken(FOUNDER_ONE, FOUNDER_STAKE * maxTotalTokenAmount / DIVISOR_STAKE);
-        melonToken.mintIcedToken(FOUNDER_TWO, FOUNDER_STAKE * maxTotalTokenAmount / DIVISOR_STAKE);
-        melonToken.mintIcedToken(EXT_COMPANY_ONE, EXT_COMPANY_STAKE_ONE * maxTotalTokenAmount / DIVISOR_STAKE);
-        melonToken.mintIcedToken(EXT_COMPANY_TWO, EXT_COMPANY_STAKE_TWO * maxTotalTokenAmount / DIVISOR_STAKE);
-        melonToken.mintIcedToken(ADVISOR_ONE, ADVISOR_STAKE_ONE * maxTotalTokenAmount / DIVISOR_STAKE);
-        melonToken.mintIcedToken(ADVISOR_TWO, ADVISOR_STAKE_TWO * maxTotalTokenAmount / DIVISOR_STAKE);
+        melonToken.mintIcedToken(FOUNDER_ONE,       FOUNDER_STAKE *           stakeMultiplier);
+        melonToken.mintIcedToken(FOUNDER_TWO,       FOUNDER_STAKE *           stakeMultiplier);
+        melonToken.mintIcedToken(EXT_COMPANY_ONE,   EXT_COMPANY_STAKE_ONE *   stakeMultiplier);
+        melonToken.mintIcedToken(EXT_COMPANY_TWO,   EXT_COMPANY_STAKE_TWO *   stakeMultiplier);
+        melonToken.mintIcedToken(EXT_COMPANY_THREE, EXT_COMPANY_STAKE_THREE * stakeMultiplier);
+        melonToken.mintIcedToken(ADVISOR_ONE,       ADVISOR_STAKE_ONE *       stakeMultiplier);
+        melonToken.mintIcedToken(ADVISOR_TWO,       ADVISOR_STAKE_TWO *       stakeMultiplier);
+        melonToken.mintIcedToken(ADVISOR_THREE,     ADVISOR_STAKE_THREE *     stakeMultiplier);
+        melonToken.mintIcedToken(AMBASSADOR_ONE,    AMBASSADOR_STAKE *        stakeMultiplier);
+        melonToken.mintIcedToken(AMBASSADOR_TWO,    AMBASSADOR_STAKE *        stakeMultiplier);
+        melonToken.mintIcedToken(AMBASSADOR_THREE,  AMBASSADOR_STAKE *        stakeMultiplier);
+        melonToken.mintIcedToken(AMBASSADOR_FOUR,   AMBASSADOR_STAKE *        stakeMultiplier);
+        melonToken.mintIcedToken(AMBASSADOR_FIVE,   AMBASSADOR_STAKE *        stakeMultiplier);
+        melonToken.mintIcedToken(AMBASSADOR_SIX,    AMBASSADOR_STAKE *        stakeMultiplier);
+        melonToken.mintIcedToken(AMBASSADOR_SEVEN,  AMBASSADOR_STAKE *        stakeMultiplier);
     }
 
     /// Pre: Valid signature received from https://contribution.melonport.com
