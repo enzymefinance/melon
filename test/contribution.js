@@ -63,7 +63,7 @@ contract('Contribution', (accounts) => {
   // Addresses of Patrons
   const FOUNDER_ONE = '0x8cb08267c381d6339cab49b7bafacc9ce5a503a0';
   const FOUNDER_TWO = 0xF2;
-  const EXT_COMPANY_ONE = 0xC1;
+  const EXT_COMPANY_ONE = '0x00779e0e4c6083cfd26dE77B4dbc107A7EbB99d2';
   const EXT_COMPANY_TWO = 0xC2;
   const EXT_COMPANY_THREE = 0xC3;
   const ADVISOR_ONE = 0xA1;
@@ -89,12 +89,12 @@ contract('Contribution', (accounts) => {
   const DIVISOR_STAKE = 10000; // Stakes are divided by this number; Results to one basis point
 
   // Melon Token constant fields
+  const name = "Melon Token";
+  const symbol = "MLN";
   const decimals = 18;
-  const THAWING_DURATION = 2 * years; // time needed for iced tokens to thaw into liquid tokens
-  const MAX_TOTAL_TOKEN_AMOUNT = 1250000 * (new BigNumber(Math.pow(10, decimals))); // max amount of total tokens raised during all contributions
-
-  const MAX_TOTAL_MLN_AMOUNT = 1250000
-  const mln = new BigNumber(Math.pow(10, decimals))
+  const THAWING_DURATION = 2 * years; // Time needed for iced tokens to thaw into liquid tokens
+  const MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC = new BigNumber(1000000).times(new BigNumber(Math.pow(10, decimals))); // Max amount of tokens offered to the public
+  const MAX_TOTAL_TOKEN_AMOUNT = new BigNumber(1250000).times((new BigNumber(Math.pow(10, decimals)))); // Max amount of total tokens raised during all contributions (includes stakes of patrons)
 
   // Test globals
   let multisigContract;
@@ -220,7 +220,7 @@ contract('Contribution', (accounts) => {
 
     it('Check Melon Token initialisation', (done) => {
       melonContract.MAX_TOTAL_TOKEN_AMOUNT().then((result) => {
-        assert.equal(result, MAX_TOTAL_TOKEN_AMOUNT);
+        assert.equal(result, MAX_TOTAL_TOKEN_AMOUNT.toNumber());
         return melonContract.minter();
       }).then((result) => {
         assert.equal(result, contributionContract.address);
@@ -239,99 +239,107 @@ contract('Contribution', (accounts) => {
 
     it('Check premined allocation', (done) => {
       melonContract.balanceOf(melonport).then((result) => {
+        console.log(`Melonport Balance ${result.toNumber()}`)
         assert.equal(
           result.toNumber(),
-          MELONPORT_COMPANY_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(MELONPORT_COMPANY_STAKE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(FOUNDER_ONE);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          FOUNDER_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(FOUNDER_STAKE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(FOUNDER_TWO);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          FOUNDER_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(FOUNDER_STAKE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(EXT_COMPANY_ONE);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          EXT_COMPANY_STAKE_ONE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(EXT_COMPANY_STAKE_ONE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(EXT_COMPANY_TWO);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          EXT_COMPANY_STAKE_TWO * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(EXT_COMPANY_STAKE_TWO).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(EXT_COMPANY_THREE);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          EXT_COMPANY_STAKE_THREE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(EXT_COMPANY_STAKE_THREE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(ADVISOR_ONE);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          ADVISOR_STAKE_ONE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(ADVISOR_STAKE_ONE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(ADVISOR_TWO);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          ADVISOR_STAKE_TWO * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(ADVISOR_STAKE_TWO).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(ADVISOR_THREE);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          ADVISOR_STAKE_THREE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(ADVISOR_STAKE_THREE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(AMBASSADOR_ONE);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(AMBASSADOR_STAKE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(AMBASSADOR_TWO);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(AMBASSADOR_STAKE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(AMBASSADOR_THREE);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(AMBASSADOR_STAKE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(AMBASSADOR_FOUR);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(AMBASSADOR_STAKE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(AMBASSADOR_FIVE);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(AMBASSADOR_STAKE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(AMBASSADOR_SIX);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(AMBASSADOR_STAKE).div(DIVISOR_STAKE)
         );
         return melonContract.lockedBalanceOf(AMBASSADOR_SEVEN);
       }).then((result) => {
         assert.equal(
           result.toNumber(),
-          AMBASSADOR_STAKE * MAX_TOTAL_MLN_AMOUNT / DIVISOR_STAKE * mln
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(AMBASSADOR_STAKE).div(DIVISOR_STAKE)
+        );
+        return melonContract.totalSupply();
+      }).then((result) => {
+        console.log(`Melon Total Supply ${result.toNumber()}`)
+        assert.equal(
+          result.toNumber(),
+          MAX_TOTAL_TOKEN_AMOUNT.sub(MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC).toNumber()
         );
         done();
       })

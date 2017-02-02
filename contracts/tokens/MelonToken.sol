@@ -14,7 +14,8 @@ contract MelonToken is ERC20, SafeMath {
     string public constant symbol = "MLN";
     uint public constant decimals = 18;
     uint public constant THAWING_DURATION = 2 years; // Time needed for iced tokens to thaw into liquid tokens
-    uint public constant MAX_TOTAL_TOKEN_AMOUNT = 1250000 * 10 ** decimals; // Max amount of total tokens raised during all contributions
+    uint public constant MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC = 1000000 * 10 ** decimals; // Max amount of tokens offered to the public
+    uint public constant MAX_TOTAL_TOKEN_AMOUNT = 1250000 * 10 ** decimals; // Max amount of total tokens raised during all contributions (includes stakes of patrons)
 
     // Fields that are only changed in constructor
     address public minter; // Contribution contract(s)

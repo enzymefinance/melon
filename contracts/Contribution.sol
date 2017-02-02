@@ -25,7 +25,7 @@ contract Contribution is SafeMath {
     // Addresses of Patrons
     address public constant FOUNDER_ONE = 0x8cb08267c381d6339cab49b7bafacc9ce5a503a0;
     address public constant FOUNDER_TWO = 0xF2;
-    address public constant EXT_COMPANY_ONE = 0xC1;
+    address public constant EXT_COMPANY_ONE = 0x00779e0e4c6083cfd26dE77B4dbc107A7EbB99d2;
     address public constant EXT_COMPANY_TWO = 0xC2;
     address public constant EXT_COMPANY_THREE = 0xC3;
     address public constant ADVISOR_ONE = 0xA1;
@@ -138,8 +138,8 @@ contract Contribution is SafeMath {
         startTime = setStartTime;
         endTime = startTime + MAX_CONTRIBUTION_DURATION;
         melonToken = new MelonToken(this, melonport, startTime, endTime); // Create Melon Token Contract
-        var maxTotalTokenAmount = melonToken.MAX_TOTAL_TOKEN_AMOUNT();
-        uint stakeMultiplier = maxTotalTokenAmount / DIVISOR_STAKE;
+        var maxTotalTokenAmountOfferedToPublic = melonToken.MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC();
+        uint stakeMultiplier = maxTotalTokenAmountOfferedToPublic / DIVISOR_STAKE;
         // Mint liquid tokens for melonport company, liquid means tradeale
         melonToken.mintLiquidToken(melonport,       MELONPORT_COMPANY_STAKE * stakeMultiplier);
         // Mint iced tokens that are unable to trade for two years and allocate according to relevant stakes
