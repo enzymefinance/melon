@@ -330,7 +330,7 @@ contract('Contribution', (accounts) => {
   });
 
   describe('CONTRIBUTION', () => {
-    it('Test BTCS access', (done) => {
+    it('Test BTCS access in time', (done) => {
       const testCase = {
         buyer: btcs,
         buy_for_how_much_ether: web3.toWei(2.1, 'ether'),
@@ -339,85 +339,43 @@ contract('Contribution', (accounts) => {
         expected_melon_amount: web3.toWei(2.1, 'ether') * (PRICE_RATE_FIRST / DIVISOR_PRICE),
       };
 
-      web3.eth.getBalance(melonport, (err, balance) => {
-        const initialBalance = balance;
-
+      // Balance Melonport
+      web3.eth.getBalance(melonport, (err, initialBalance) => {
         contributionContract.btcsBuyRecipient(
           testCase.recipient_of_melon,
           { from: testCase.buyer, value: testCase.buy_for_how_much_ether })
-        .then(() =>  melonContract.balanceOf(testCase.recipient_of_melon))
+        .then(() => melonContract.balanceOf(testCase.recipient_of_melon))
         .then((result) => {
           assert.equal(
             result.toNumber(),
             testCase.expected_melon_amount);
-          // After contribution period already started
-          // TODO fix spacing
-          send('evm_increaseTime', [startDelay], (err, result) => {
-            assert.equal(err, null);
-            contributionContract.btcsBuyRecipient(
-              testCase.recipient_of_melon,
-              { from: testCase.buyer, value: testCase.buy_for_how_much_ether })
-            .then(() => {
-              assert.fail();
-            }).catch((err) => {
-              // TODO check this again
-              console.log(`Err.name: ${err.name}`);
-              assert.notEqual(err.name, 'AssertionError');
-              web3.eth.getBalance(melonport, (err, result) => {
-                const finalBalance = result;
-                assert.equal(
-                  finalBalance.minus(initialBalance),
-                  testCase.buy_for_how_much_ether
-                );
-                done();
-              });
-            });
+          web3.eth.getBalance(melonport, (errFinal, finalBalance) => {
+            assert.equal(
+              finalBalance.minus(initialBalance),
+              testCase.buy_for_how_much_ether);
+            done();
           });
         });
       });
     });
 
-    it('Test buy', (done) => {
-      done()
-      // // TODO in object
-      // const amountToBuy = web3.toWei(2.1, 'ether');
-      // let amountBought = new BigNumber(0);
-      //
-      // web3.eth.getBalance(melonport, (err, balance) => {
-      //   const initialBalance = balance;
-      //   async.eachSeries(testCases,
-      //     (testCase, callbackEach) => {
-      //       // TODO fix spacing
-      //       send('evm_increaseTime', [testCase.timeSpacing - 60], (err, result) => {
-      //         assert.equal(err, null);
-      //
-      //         contributionContract.buy(
-      //           testCase.v, testCase.r, testCase.s,
-      //           { from: testCase.account, value: amountToBuy })
-      //         .then(() => {
-      //           amountBought = amountBought.add(amountToBuy);
-      //           return melonContract.balanceOf(testCase.account);
-      //         }).then((result) => {
-      //           console.log(`Expected Price: ${testCase.expectedPrice}`);
-      //           assert.equal(
-      //             result.toNumber(),
-      //             testCase.expectedPrice / (DIVISOR_PRICE * amountToBuy));
-      //           callbackEach();
-      //         });
-      //       });
-      //     },
-      //     (err) => {
-      //       web3.eth.getBalance(melonport, (err, balance) => {
-      //         const finalBalance = balance;
-      //         assert.equal(
-      //           finalBalance.minus(initialBalance).toNumber(),
-      //           amountBought.toNumber()
-      //         );
-      //         done();
-      //       });
-      //     }
-      //   );
-      // });
+    it('Test buy too early', (done) => {
+      const testCase = testCases[0];
+      const amountToBuy = web3.toWei(2.1, 'ether');
+
+      contributionContract.buy(
+        testCase.v, testCase.r, testCase.s,
+        { from: testCase.account, value: amountToBuy })
+      // Gets executed if contract throws exception
+      .catch(() => {
+        melonContract.balanceOf(testCase.account)
+        .then((result) => {
+          assert.equal(
+            result.toNumber(),
+            0);
+          done();
+        });
+      });
     });
 
     it('Test buying on behalf of a recipient', (done) => {
