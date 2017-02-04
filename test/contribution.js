@@ -104,7 +104,7 @@ contract('Contribution', (accounts) => {
 
   // Accounts
   const multiSigOwners = accounts.slice(0, 6);
-  const requiredSignatures = 4;
+  const requiredSignatures = 3;
   let melonport; // defined as multisigContract.address
   const btcs = accounts[1];
   const signer = accounts[2];
@@ -348,7 +348,6 @@ contract('Contribution', (accounts) => {
 
   describe('CONTRIBUTION', () => {
     it('Test BTCS access', (done) => {
-
       const testCase = {
         buyer: btcs,
         buy_for_how_much_ether: web3.toWei(2.1, "ether"),
@@ -446,9 +445,5 @@ contract('Contribution', (accounts) => {
     it('Test changing Melonport address', (done) => {
       done();
     });
-  });
-
-  describe('SETTING OF NEW MINTER', () => {
-
   });
 });

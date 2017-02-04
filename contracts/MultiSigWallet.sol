@@ -6,7 +6,7 @@ import "./dependencies/Assertive.sol";
 /// @author Melonport AG <team@melonport.com>
 /// @notice Allows multiple owners to agree on any given transaction before execution
 /// @notice Inspired by https://github.com/ethereum/dapp-bin/blob/master/wallet/wallet.sol
-/// @notice Only to be used for Ethereum addresses that are used uniquely for this Multi Sig Wallet!
+/// @notice Only to be used with Ethereum addresses that are used uniquely for this Multi Sig Wallet!
 contract MultiSigWallet is Assertive {
 
     // TYPES
@@ -28,7 +28,7 @@ contract MultiSigWallet is Assertive {
 
     // Fields that can be changed by functions
     bytes32[] transactionList; // Array of transactions hashes
-    mapping (bytes32 => Transaction) public transactions; // Maps transaction hash [bytes32[ to a Transaction [struct]
+    mapping (bytes32 => Transaction) public transactions; // Maps transaction hash [bytes32] to a Transaction [struct]
     mapping (bytes32 => mapping (address => bool)) public confirmations; // Whether [bool] transaction hash [bytes32] has been confirmed by owner [address]
 
     // EVENTS
@@ -145,21 +145,12 @@ contract MultiSigWallet is Assertive {
     // NON-CONSTANT PUBLIC METHODS
 
     /// Pre: Multi sig owner; Transaction has not already been submited
-    /// Post: Transaction confirmed for multi sig owner
+    /// Post: Propose and confirm transaction parameters for multi sig owner (msg.sender)
     function submitTransaction(address destination, uint value, bytes data, uint nonce)
         returns (bytes32 txHash)
     {
         txHash = addTransaction(destination, value, data, nonce);
         confirmTransaction(txHash);
-    }
-
-    /// Pre: Multi sig owner(s) signature(s); Transaction has not already been submited
-    /// Post: Transaction confirmed for multi sig owner(s)
-    function submitTransactionWithSignatures(address destination, uint value, bytes data, uint nonce, uint8[] v, bytes32[] r, bytes32[] s)
-        returns (bytes32 txHash)
-    {
-        txHash = addTransaction(destination, value, data, nonce);
-        confirmTransactionWithSignatures(txHash, v, r, s);
     }
 
     /// Pre: Multi sig owner
@@ -168,21 +159,6 @@ contract MultiSigWallet is Assertive {
         only_multi_sig_owner
     {
         addConfirmation(txHash, msg.sender);
-        if (isConfirmed(txHash))
-            executeTransaction(txHash);
-    }
-
-    /// Pre: Anyone even non multi sig owner
-    /// Post: Confirms approval to execute transaction of signing multi sig owner(s)
-    function confirmTransactionWithSignatures(bytes32 txHash, uint8[] v, bytes32[] r, bytes32[] s)
-    {
-        // Add valid multi sig owner(s) signature(s) to confirmations
-        for (uint i = 0; i < v.length; i++)
-        {
-            address owner = ecrecover(txHash, v[i], r[i], s[i]);
-            assert(isMultiSigOwner[owner]);
-            addConfirmation(txHash, owner);
-        }
         if (isConfirmed(txHash))
             executeTransaction(txHash);
     }
@@ -224,5 +200,4 @@ contract MultiSigWallet is Assertive {
     /// Pre: All fields, including { multiSigOwners, requiredSignatures } are valid
     /// Post: Received sent funds into wallet
     function() payable { Deposit(msg.sender, msg.value); }
-
 }
