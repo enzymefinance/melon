@@ -82,7 +82,8 @@ contract MultiSigWallet is Assertive {
     function isConfirmed(bytes32 txHash) constant returns (bool)
     {
         uint count = 0;
-        for (uint i = 0; i < multiSigOwners.length && count < requiredSignatures; i++)
+        // TODO check i += 1
+        for (uint i = 0; i < multiSigOwners.length && count < requiredSignatures; i += 1)
             if (confirmations[txHash][multiSigOwners[i]])
                 count += 1;
         return requiredSignatures <= count;
