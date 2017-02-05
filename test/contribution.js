@@ -451,8 +451,8 @@ contract('Contribution', (accounts) => {
       const sha3Hash = web3.sha3('buy(uint8,bytes32,bytes32)');
       const methodId = `${sha3Hash.slice(2, 10)}`;
       // Big-endian encoding of uint, padded on the higher-order (left) side with zero-bytes such that the length is a multiple of 32 bytes
-      sender.v = web3.fromDecimal(sender.v).slice(2);
-      const v = `${'0'.repeat(64 - sender.v.toString().length)}${sender.v}`;
+      const vHex = web3.fromDecimal(sender.v).slice(2);
+      const v = `${'0'.repeat(64 - vHex.length)}${vHex}`;
       const r = `${sender.r.slice(2)}`;
       const s = `${sender.s.slice(2)}`;
       const data = `${methodId}${v}${r}${s}`;
@@ -460,21 +460,58 @@ contract('Contribution', (accounts) => {
       let initialBalance;
       melonContract.balanceOf(sender.account).then((result) => {
         initialBalance = result;
-        web3.eth.sendTransaction({ from: sender.account, to: contributionContract.address, data, value: amount }, (err) => {
-          if (!err) {
-            melonContract.balanceOf(sender.account)
-            .then((finalBalance) => {
-              assert.equal(
-                finalBalance.toNumber(),
-                initialBalance.plus((sender.expectedPrice / DIVISOR_PRICE) * amount).toNumber());
-              done();
-            })
-          } else {
-            done(err);
-          }
-        });
-      })
+        web3.eth.sendTransaction(
+          { from: sender.account, to: contributionContract.address, data, value: amount }, (err) => {
+            if (!err) {
+              melonContract.balanceOf(sender.account)
+              .then((finalBalance) => {
+                assert.equal(
+                  finalBalance.toNumber(),
+                  initialBalance.plus((sender.expectedPrice / DIVISOR_PRICE) * amount).toNumber());
+                done();
+              });
+            } else {
+              done(err);
+            }
+          });
+      });
     });
+
+    it('Test buying with raw transaction - eth balance', (done) => {
+      const sender = testCases[7];
+      const amount = web3.toWei(1.2, 'ether');
+
+      const sha3Hash = web3.sha3('buy(uint8,bytes32,bytes32)');
+      const methodId = `${sha3Hash.slice(2, 10)}`;
+      // Big-endian encoding of uint, padded on the higher-order (left) side with zero-bytes such that the length is a multiple of 32 bytes
+      const vHex = web3.fromDecimal(sender.v).slice(2);
+      const v = `${'0'.repeat(64 - vHex.length)}${vHex}`;
+      const r = `${sender.r.slice(2)}`;
+      const s = `${sender.s.slice(2)}`;
+      const data = `${methodId}${v}${r}${s}`;
+
+      // Balance Melonport
+      const gasEstimate = web3.eth.estimateGas(
+        { from: sender.account, to: contributionContract.address, data, value: amount });
+      web3.eth.getBalance(sender.account, (err, initialBalance) => {
+        if (err) done(err);
+        web3.eth.sendTransaction(
+          { from: sender.account, to: contributionContract.address, data, value: amount },
+          (err) => {
+            if (!err) {
+              web3.eth.getBalance(sender.account, (errFinal, finalBalance) => {
+                assert.equal(
+                  finalBalance.toNumber(),
+                  initialBalance.minus(amount).minus(gasEstimate).plus(100000));
+                done();
+              });
+            } else {
+              done(err);
+            }
+          });
+      });
+    });
+
 
     it('Test changing Melonport address', (done) => {
       done();
@@ -517,7 +554,7 @@ contract('Contribution', (accounts) => {
   describe('PAST END OF PUBLIC CONTRIBUTION', () => {
     before('Time travel to endTime', (done) => {
       web3.eth.getBlock('latest', (err, result) => {
-        send('evm_increaseTime', [endTime - result.timestamp + 1], (err, result) => {
+        send('evm_increaseTime', [(endTime - result.timestamp) + 1], (err, result) => {
           assert.equal(err, null);
           send('evm_mine', [], (err, result) => {
             assert.equal(err, null);
