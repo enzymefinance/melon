@@ -402,14 +402,6 @@ contract('Contribution', (accounts) => {
       });
     });
 
-    it('Test buying with raw transaction', (done) => {
-      done();
-    });
-
-    it('Test changing Melonport address', (done) => {
-      done();
-    });
-
     it('Test buying and buyingRecipient in time', (done) => {
       let amountBought = new BigNumber(0);
       web3.eth.getBalance(melonport, (err, initialBalance) => {
@@ -452,6 +444,42 @@ contract('Contribution', (accounts) => {
       });
     });
 
+    it('Test buying with raw transaction', (done) => {
+      const sender = testCases[7];
+      const amount = web3.toWei(1.2, 'ether');
+
+      const sha3Hash = web3.sha3('buy(uint8,bytes32,bytes32)');
+      const methodId = `${sha3Hash.slice(2, 10)}`;
+      // Big-endian encoding of uint, padded on the higher-order (left) side with zero-bytes such that the length is a multiple of 32 bytes
+      sender.v = web3.fromDecimal(sender.v).slice(2);
+      const v = `${'0'.repeat(64 - sender.v.toString().length)}${sender.v}`;
+      const r = `${sender.r.slice(2)}`;
+      const s = `${sender.s.slice(2)}`;
+      const data = `${methodId}${v}${r}${s}`;
+
+      let initialBalance;
+      melonContract.balanceOf(sender.account).then((result) => {
+        initialBalance = result;
+        web3.eth.sendTransaction({ from: sender.account, to: contributionContract.address, data, value: amount }, (err) => {
+          if (!err) {
+            melonContract.balanceOf(sender.account)
+            .then((finalBalance) => {
+              assert.equal(
+                finalBalance.toNumber(),
+                initialBalance.plus((sender.expectedPrice / DIVISOR_PRICE) * amount).toNumber());
+              done();
+            })
+          } else {
+            done(err);
+          }
+        });
+      })
+    });
+
+    it('Test changing Melonport address', (done) => {
+      done();
+    });
+
     it('Test token transfer too early', (done) => {
       const sender = testCases[0];
       const recipient = testCases[1];
@@ -486,7 +514,7 @@ contract('Contribution', (accounts) => {
     });
   });
 
-  describe('END OF PUBLIC CONTRIBUTION', () => {
+  describe('PAST END OF PUBLIC CONTRIBUTION', () => {
     before('Time travel to endTime', (done) => {
       web3.eth.getBlock('latest', (err, result) => {
         send('evm_increaseTime', [endTime - result.timestamp + 1], (err, result) => {
