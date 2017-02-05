@@ -555,7 +555,7 @@ contract('Contribution', (accounts) => {
   describe('TWO YEARS AFTER CONTRIBUTION', () => {
     before('Time travel to endTime', (done) => {
       web3.eth.getBlock('latest', (err, result) => {
-        send('evm_increaseTime', [(endTime + twoYearsTime) - result.timestamp], (err, result) => {
+        send('evm_increaseTime', [(endTime + (twoYearsTime * 1.01)) - result.timestamp], (err, result) => {
           assert.equal(err, null);
           send('evm_mine', [], (err, result) => {
             assert.equal(err, null);
@@ -565,8 +565,23 @@ contract('Contribution', (accounts) => {
       });
     });
 
-    it('Test token transfer patrons', (done) => {
-      done();
+    it('Test unthawing tokens of patrons', (done) => {
+      const sender = EXT_COMPANY_ONE;
+      let lockedBalanceOfSender;
+      melonContract.lockedBalanceOf(sender).then((result) => {
+        lockedBalanceOfSender = result;
+        assert.equal(
+          lockedBalanceOfSender.toNumber(),
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(EXT_COMPANY_STAKE_ONE).div(DIVISOR_STAKE));
+        return melonContract.unlockBalance(sender, { from: melonport });
+      })
+      .then(() => melonContract.balanceOf(sender))
+      .then((finalBalanceSender) => {
+        assert.equal(
+          finalBalanceSender.toNumber(),
+          lockedBalanceOfSender);
+        done();
+      });
     });
   });
 });
