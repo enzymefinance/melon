@@ -110,23 +110,12 @@ contract('Contribution', (accounts) => {
   let startTime;
   let endTime;
   const numTestCases = 8;
-
-  const snapshotIds = [];
-  const timeTravelTwoYearForward = 2 * years;
+  const twoYearsTime = 2 * years;
 
   describe('PREPARATIONS', () => {
     before('Check accounts', (done) => {
       assert.equal(accounts.length, 10);
       done();
-    });
-
-    beforeEach('Checkpoint, so that we can revert later', (done) => {
-      send('evm_snapshot', (err, result) => {
-        if (!err) {
-          snapshotIds.push(result.id);
-        }
-        done(err);
-      });
     });
 
     it('Set startTime as now', (done) => {
@@ -224,7 +213,6 @@ contract('Contribution', (accounts) => {
 
     it('Check premined allocation', (done) => {
       melonContract.balanceOf(melonport).then((result) => {
-        console.log(`Melonport Balance ${result.toNumber()}`);
         assert.equal(
           result.toNumber(),
           MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(MELONPORT_COMPANY_STAKE).div(DIVISOR_STAKE));
@@ -321,7 +309,6 @@ contract('Contribution', (accounts) => {
         return melonContract.totalSupply();
       })
       .then((result) => {
-        console.log(`Melon Total Supply ${result.toNumber()}`);
         assert.equal(
           result.toNumber(),
           MAX_TOTAL_TOKEN_AMOUNT.sub(MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC).toNumber());
@@ -330,7 +317,7 @@ contract('Contribution', (accounts) => {
     });
   });
 
-  describe('CONTRIBUTION', () => {
+  describe('BEFORE PUBLIC CONTRIBUTION', () => {
     it('Test BTCS access in time', (done) => {
       // TODO cleanup
       const testCase = {
@@ -361,7 +348,7 @@ contract('Contribution', (accounts) => {
       });
     });
 
-    it('Test buy too early', (done) => {
+    it('Test buying too early', (done) => {
       const testCase = testCases[0];
       contributionContract.buy(
         testCase.v, testCase.r, testCase.s,
@@ -377,11 +364,11 @@ contract('Contribution', (accounts) => {
         });
       });
     });
+  });
 
-    it('Time travel to startTime', (done) => {
+  describe('START OF PUBLIC CONTRIBUTION', () => {
+    before('Time travel to startTime', (done) => {
       web3.eth.getBlock('latest', (err, result) => {
-        console.log(`Time apart: ${startTime - result.timestamp}`);
-        // assert.equal(startTime - result.timestamp, startDelay);
         send('evm_increaseTime', [startTime - result.timestamp], (err, result) => {
           assert.equal(err, null);
           send('evm_mine', [], (err, result) => {
@@ -415,14 +402,20 @@ contract('Contribution', (accounts) => {
       });
     });
 
-    it('Test buying in time', (done) => {
-      let amountBought = new BigNumber(0);
+    it('Test buying with raw transaction', (done) => {
+      done();
+    });
 
+    it('Test changing Melonport address', (done) => {
+      done();
+    });
+
+    it('Test buying and buyingRecipient in time', (done) => {
+      let amountBought = new BigNumber(0);
       web3.eth.getBalance(melonport, (err, initialBalance) => {
         async.eachSeries(testCases,
           (testCase, callbackEach) => {
             web3.eth.getBlock('latest', (err, result) => {
-              console.log(`Time apart: ${testCase.blockTime - result.timestamp}`);
               send('evm_increaseTime', [testCase.blockTime - result.timestamp], (err, result) => {
                 assert.equal(err, null);
                 send('evm_mine', [], (err, result) => {
@@ -434,8 +427,8 @@ contract('Contribution', (accounts) => {
                     amountBought = amountBought.add(testCase.amountToBuy);
                     return melonContract.balanceOf(testCase.account);
                   }).then((result) => {
-                    console.log(`Melon amount expected: ${web3.fromWei((testCase.expectedPrice / DIVISOR_PRICE) * testCase.amountToBuy, 'ether')}`);
-                    console.log(`Melon amount actual:   ${web3.fromWei(result.toNumber(), 'ether')}`);
+                    // console.log(`Melon amount expected: ${web3.fromWei((testCase.expectedPrice / DIVISOR_PRICE) * testCase.amountToBuy, 'ether')}`);
+                    // console.log(`Melon amount actual:   ${web3.fromWei(result.toNumber(), 'ether')}`);
                     assert.equal(
                       result.toNumber(),
                       (testCase.expectedPrice / DIVISOR_PRICE) * testCase.amountToBuy);
@@ -447,7 +440,7 @@ contract('Contribution', (accounts) => {
           },
           (err) => {
             web3.eth.getBalance(melonport, (err, finalBalance) => {
-              console.log(`ETH received: ${web3.fromWei(finalBalance.minus(initialBalance).toNumber(), 'ether')}`);
+              // console.log(`ETH received: ${web3.fromWei(finalBalance.minus(initialBalance).toNumber(), 'ether')}`);
               assert.equal(
                 finalBalance.minus(initialBalance).toNumber(),
                 amountBought.toNumber()
@@ -459,15 +452,67 @@ contract('Contribution', (accounts) => {
       });
     });
 
-    it('Test buying on behalf of a recipient', (done) => {
+    it('Test token transfer too early', (done) => {
       done();
     });
+  });
 
-    it('Test buying with raw transaction', (done) => {
-      done();
+  describe('END OF PUBLIC CONTRIBUTION', () => {
+    before('Time travel to endTime', (done) => {
+      web3.eth.getBlock('latest', (err, result) => {
+        send('evm_increaseTime', [endTime - result.timestamp], (err, result) => {
+          assert.equal(err, null);
+          send('evm_mine', [], (err, result) => {
+            assert.equal(err, null);
+            done();
+          });
+        });
+      });
     });
 
-    it('Test changing Melonport address', (done) => {
+    it('Test buying too late', (done) => {
+      done();
+      // const testCase = {
+      //   buyer: btcs,
+      //   buy_for_how_much_ether: web3.toWei(2.1, 'ether'),
+      //   recipient_of_melon: accounts[8],
+      //   expected_price: PRICE_RATE_FIRST / DIVISOR_PRICE,
+      //   expected_melon_amount: 0, // Too late
+      // };
+      // contributionContract.btcsBuyRecipient(
+      //   testCase.recipient_of_melon,
+      //   { from: testCase.buyer, value: testCase.buy_for_how_much_ether })
+      // .catch(() => {
+      //   // Gets executed if contract throws exception
+      //   melonContract.balanceOf(testCase.recipient_of_melon)
+      //   .then((result) => {
+      //     assert.equal(
+      //       result.toNumber(),
+      //       testCase.expected_melon_amount);
+      //     done();
+      //   });
+      // });
+    });
+
+    it('Test token transfer in time', (done) => {
+      done();
+    });
+  });
+
+  describe('TWO YEARS AFTER CONTRIBUTION', () => {
+    before('Time travel to endTime', (done) => {
+      web3.eth.getBlock('latest', (err, result) => {
+        send('evm_increaseTime', [(endTime + twoYearsTime) - result.timestamp], (err, result) => {
+          assert.equal(err, null);
+          send('evm_mine', [], (err, result) => {
+            assert.equal(err, null);
+            done();
+          });
+        });
+      });
+    });
+
+    it('Test token transfer patrons', (done) => {
       done();
     });
   });
