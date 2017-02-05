@@ -453,14 +453,43 @@ contract('Contribution', (accounts) => {
     });
 
     it('Test token transfer too early', (done) => {
-      done();
+      const sender = testCases[0];
+      const recipient = testCases[1];
+      const amount = web3.toWei(1.2, 'ether');
+
+      let initialBalanceSender;
+      let initialBalanceRecipient;
+      melonContract.balanceOf(sender.account).then((result) => {
+        initialBalanceSender = result;
+        return melonContract.balanceOf(recipient.account);
+      })
+      .then((result) => {
+        initialBalanceRecipient = result;
+        melonContract.transfer(recipient.account, amount,
+          { from: sender.account })
+        .catch(() => {
+          melonContract.balanceOf(sender.account)
+          .then((finalBalanceSender) => {
+            assert.equal(
+              finalBalanceSender.toNumber(),
+              initialBalanceSender.toNumber());
+            return melonContract.balanceOf(recipient.account);
+          })
+          .then((finalBalanceRecipient) => {
+            assert.equal(
+              finalBalanceRecipient.toNumber(),
+              initialBalanceRecipient.toNumber());
+            done();
+          });
+        });
+      });
     });
   });
 
   describe('END OF PUBLIC CONTRIBUTION', () => {
     before('Time travel to endTime', (done) => {
       web3.eth.getBlock('latest', (err, result) => {
-        send('evm_increaseTime', [endTime - result.timestamp], (err, result) => {
+        send('evm_increaseTime', [endTime - result.timestamp + 1], (err, result) => {
           assert.equal(err, null);
           send('evm_mine', [], (err, result) => {
             assert.equal(err, null);
@@ -471,31 +500,55 @@ contract('Contribution', (accounts) => {
     });
 
     it('Test buying too late', (done) => {
-      done();
-      // const testCase = {
-      //   buyer: btcs,
-      //   buy_for_how_much_ether: web3.toWei(2.1, 'ether'),
-      //   recipient_of_melon: accounts[8],
-      //   expected_price: PRICE_RATE_FIRST / DIVISOR_PRICE,
-      //   expected_melon_amount: 0, // Too late
-      // };
-      // contributionContract.btcsBuyRecipient(
-      //   testCase.recipient_of_melon,
-      //   { from: testCase.buyer, value: testCase.buy_for_how_much_ether })
-      // .catch(() => {
-      //   // Gets executed if contract throws exception
-      //   melonContract.balanceOf(testCase.recipient_of_melon)
-      //   .then((result) => {
-      //     assert.equal(
-      //       result.toNumber(),
-      //       testCase.expected_melon_amount);
-      //     done();
-      //   });
-      // });
+      const sender = testCases[0];
+      let initialBalance;
+      melonContract.balanceOf(sender.account)
+      .then((result) => {
+        initialBalance = result.toNumber();
+        return contributionContract.buy(
+          sender.v, sender.r, sender.s,
+          { from: sender.account, value: sender.amountToBuy });
+      })
+      .catch(() => {
+        melonContract.balanceOf(sender.account)
+        .then((result) => {
+          assert.equal(
+            result.toNumber(),
+            initialBalance);
+          done();
+        });
+      });
     });
 
     it('Test token transfer in time', (done) => {
-      done();
+      const sender = testCases[0];
+      const recipient = testCases[1];
+      const amount = web3.toWei(1.2, 'ether');
+
+      let initialBalanceSender;
+      let initialBalanceRecipient;
+      melonContract.balanceOf(sender.account).then((result) => {
+        initialBalanceSender = result;
+        return melonContract.balanceOf(recipient.account);
+      })
+      .then((result) => {
+        initialBalanceRecipient = result;
+        return melonContract.transfer(recipient.account, amount,
+          { from: sender.account });
+      })
+      .then(() => melonContract.balanceOf(sender.account))
+      .then((finalBalanceSender) => {
+        assert.equal(
+          finalBalanceSender.toNumber(),
+          initialBalanceSender.minus(amount).toNumber());
+        return melonContract.balanceOf(recipient.account);
+      })
+      .then((finalBalanceRecipient) => {
+        assert.equal(
+          finalBalanceRecipient.toNumber(),
+          initialBalanceRecipient.plus(amount).toNumber());
+        done();
+      });
     });
   });
 
