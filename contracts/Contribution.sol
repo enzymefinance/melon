@@ -13,14 +13,14 @@ contract Contribution is SafeMath {
     // FILEDS
 
     // Constant fields
-    uint public constant ETHER_CAP = 250000 ether; // Max amount raised during first contribution; targeted amount CHF 2.5MN
+    uint public constant ETHER_CAP = 220000 ether; // Max amount raised during first contribution; targeted amount CHF 2.5MN
     uint public constant MAX_CONTRIBUTION_DURATION = 4 weeks; // Max amount in seconds of contribution period
     uint public constant BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // Max melon token allocation for btcs before contribution period starts
     // Price Rates
-    uint public constant PRICE_RATE_FIRST = 2000; // Four price tiers, each valid for two weeks
-    uint public constant PRICE_RATE_SECOND = 1950;
-    uint public constant PRICE_RATE_THIRD = 1900;
-    uint public constant PRICE_RATE_FOURTH = 1850;
+    uint public constant PRICE_RATE_FIRST = 2250; // Four price tiers, each valid for two weeks
+    uint public constant PRICE_RATE_SECOND = 2200;
+    uint public constant PRICE_RATE_THIRD = 2150;
+    uint public constant PRICE_RATE_FOURTH = 2100;
     uint public constant DIVISOR_PRICE = 1000; // Price rates are divided by this number
     // Addresses of Patrons
     address public constant FOUNDER_ONE = 0x8cb08267c381d6339cab49b7bafacc9ce5a503a0;

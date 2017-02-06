@@ -54,10 +54,10 @@ contract('Contribution', (accounts) => {
   const MAX_CONTRIBUTION_DURATION = 4 * weeks; // max amount in seconds of contribution period
   const BTCS_ETHER_CAP = ETHER_CAP * (25 / 100); // max iced allocation for btcs
   // Price Rates
-  const PRICE_RATE_FIRST = 2000; // Four price tiers, each valid for two weeks
-  const PRICE_RATE_SECOND = 1950;
-  const PRICE_RATE_THIRD = 1900;
-  const PRICE_RATE_FOURTH = 1850;
+  const PRICE_RATE_FIRST = 2250; // Four price tiers, each valid for two weeks
+  const PRICE_RATE_SECOND = 2200;
+  const PRICE_RATE_THIRD = 2150;
+  const PRICE_RATE_FOURTH = 2100;
   const DIVISOR_PRICE = 1000; // Price rates are divided by this number
   // Addresses of Patrons
   const FOUNDER_ONE = '0x8cb08267c381d6339cab49b7bafacc9ce5a503a0';
@@ -140,13 +140,13 @@ contract('Contribution', (accounts) => {
         const blockTime = Math.round(startTime + (i * timeSpacing));
         let expectedPrice;
         if (blockTime >= startTime && blockTime < startTime + (1 * weeks)) {
-          expectedPrice = 2000;
+          expectedPrice = PRICE_RATE_FIRST;
         } else if (blockTime >= startTime + (1 * weeks) && blockTime < startTime + (2 * weeks)) {
-          expectedPrice = 1950;
+          expectedPrice = PRICE_RATE_SECOND;
         } else if (blockTime >= startTime + (2 * weeks) && blockTime < startTime + (3 * weeks)) {
-          expectedPrice = 1900;
+          expectedPrice = PRICE_RATE_THIRD;
         } else if (blockTime >= startTime + (3 * weeks) && blockTime < endTime) {
-          expectedPrice = 1850;
+          expectedPrice = PRICE_RATE_FOURTH
         } else {
           expectedPrice = 0;
         }
