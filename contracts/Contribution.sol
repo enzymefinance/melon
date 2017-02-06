@@ -24,23 +24,26 @@ contract Contribution is SafeMath {
     uint public constant DIVISOR_PRICE = 1000; // Price rates are divided by this number
     // Addresses of Patrons
     address public constant FOUNDER_ONE = 0x8cb08267c381d6339cab49b7bafacc9ce5a503a0;
-    address public constant FOUNDER_TWO = 0xF2;
+    address public constant FOUNDER_TWO = 0xbCE173c414fE96F0F282E1DB904fD4D45EeE9e05;
     address public constant EXT_COMPANY_ONE = 0x00779e0e4c6083cfd26dE77B4dbc107A7EbB99d2;
-    address public constant EXT_COMPANY_TWO = 0xC2;
-    address public constant EXT_COMPANY_THREE = 0xC3;
-    address public constant ADVISOR_ONE = 0xA1;
+    address public constant EXT_COMPANY_TWO = 0x1F06B976136e94704D328D4d23aae7259AaC12a2;
+    address public constant EXT_COMPANY_THREE = 0xDD91615Ea8De94bC48231c4ae9488891F1648dc5;
+    address public constant ADVISOR_ONE = 0x4f2AF8d2614190Cc80c6E9772B0C367db8D9753C;
     address public constant ADVISOR_TWO = 0x715a70a7c7d76acc8d5874862e381c1940c19cce;
-    address public constant ADVISOR_THREE = 0xA3;
-    address public constant AMBASSADOR_ONE = 0xE1;
-    address public constant AMBASSADOR_TWO = 0xE2;
-    address public constant AMBASSADOR_THREE = 0xE3;
-    address public constant AMBASSADOR_FOUR = 0xE4;
-    address public constant AMBASSADOR_FIVE = 0xE5;
-    address public constant AMBASSADOR_SIX = 0xE6;
-    address public constant AMBASSADOR_SEVEN = 0xE7;
+    address public constant ADVISOR_THREE = 0x8615F13C12c24DFdca0ba32511E2861BE02b93b2;
+    address public constant AMBASSADOR_ONE = 0xd3841FB80CE408ca7d0b41D72aA91CA74652AF47;
+    address public constant AMBASSADOR_TWO = 0xDb775577538018a689E4Ad2e8eb5a7Ae7c34722B;
+    address public constant AMBASSADOR_THREE = 0xaa967e0ce6A1Ff5F9c124D15AD0412F137C99767;
+    address public constant AMBASSADOR_FOUR = 0x910B41a6568a645437bC286A5C733f3c501d8c88;
+    address public constant AMBASSADOR_FIVE = 0xb1d16BFE840E66E3c81785551832aAACB4cf69f3;
+    address public constant AMBASSADOR_SIX = 0x5F6ff16364BfEf546270325695B6e90cc89C497a;
+    address public constant AMBASSADOR_SEVEN = 0x58656e8872B0d266c2acCD276cD23F4C0B5fEfb9;
+    address public constant SPECIALIST_ONE = 0x8a815e818E617d1f93BE7477D179258aC2d25310;
+    address public constant SPECIALIST_TWO = 0x1eba6702ba21cfc1f6c87c726364b60a5e444901;
+    address public constant SPECIALIST_THREE = 0xD3;
     // Stakes of Patrons
     uint public constant MELONPORT_COMPANY_STAKE = 1000; // 10% of all created melon token allocated to melonport company
-    uint public constant FOUNDER_STAKE = 465; // 4.65% of all created melon token allocated to founder
+    uint public constant FOUNDER_STAKE = 445; // 4.45% of all created melon token allocated to founder
     uint public constant EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon token allocated to external company
     uint public constant EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon token allocated to external company
     uint public constant EXT_COMPANY_STAKE_THREE = 50; // 0.5% of all created melon token allocated to external company
@@ -48,6 +51,9 @@ contract Contribution is SafeMath {
     uint public constant ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon token allocated to advisor
     uint public constant ADVISOR_STAKE_THREE = 10; // 0.1% of all created melon token allocated to advisor
     uint public constant AMBASSADOR_STAKE = 5; // 0.05% of all created melon token allocated to ambassadors
+    uint public constant SPECIALIST_STAKE_ONE = 25; // 0.25% of all created melon token allocated to specialist
+    uint public constant SPECIALIST_STAKE_TWO = 10; // 0.1% of all created melon token allocated to specialist
+    uint public constant SPECIALIST_STAKE_THREE = 5; // 0.05% of all created melon token allocated to specialist
     uint public constant DIVISOR_STAKE = 10000; // Stakes are divided by this number; Results to one basis point
 
     // Fields that are only changed in constructor
@@ -158,6 +164,9 @@ contract Contribution is SafeMath {
         melonToken.mintIcedToken(AMBASSADOR_FIVE,   AMBASSADOR_STAKE *        stakeMultiplier);
         melonToken.mintIcedToken(AMBASSADOR_SIX,    AMBASSADOR_STAKE *        stakeMultiplier);
         melonToken.mintIcedToken(AMBASSADOR_SEVEN,  AMBASSADOR_STAKE *        stakeMultiplier);
+        melonToken.mintIcedToken(SPECIALIST_ONE,    SPECIALIST_STAKE_ONE *    stakeMultiplier);
+        melonToken.mintIcedToken(SPECIALIST_TWO,    SPECIALIST_STAKE_TWO *    stakeMultiplier);
+        melonToken.mintIcedToken(SPECIALIST_THREE,  SPECIALIST_STAKE_THREE *  stakeMultiplier);
     }
 
     /// Pre: Valid signature received from https://contribution.melonport.com
