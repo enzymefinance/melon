@@ -23,18 +23,30 @@ contract('MultiSigWallet', (accounts) => {
       return multisigContract.requiredSignatures();
     }).then((result) => {
       assert.equal(result, requiredSignatures);
-      done();
+      web3.eth.sendTransaction(
+        { from: accounts[0], to: multisigContract.address, value: web3.toWei(10, 'ether') }, (err) => {
+          if (!err) {
+            web3.eth.getBalance(multisigContract.address, (err, res) => {
+              console.log(res);
+              console.log(err);
+            });
+            done();
+          } else {
+            done(err);
+          }
+        });
     });
   });
 
   it('Test changing Melonport address', (done) => {
-    const tx = { destination: '0xA1', value: '0', data: '0x0', nonce: '0' };
+    const tx = { destination: accounts[0], value: web3.toWei(5, 'ether'), data: '0', nonce: '0' };
     const sha3Hash = web3.sha3('changeMintingAddress(address)');
     const methodId = `${sha3Hash.slice(2, 10)}${'0'.repeat(32 - 8)}`;
     const data = `0x${methodId}`;
     console.log(methodId);
     let txHash;
-    tx.data = data;
+    // tx.data = data;
+    console.log(tx)
     // txHash = sha3(destination, value, data, nonce);
     // pending hash != this hash!
 
@@ -43,6 +55,7 @@ contract('MultiSigWallet', (accounts) => {
     .then((result) => txHash = result)
     .then(() => multisigContract.confirmTransaction(txHash, { from: multiSigOwners[1] }))
     .then(() => multisigContract.confirmTransaction(txHash, { from: multiSigOwners[2] }))
+    .then(() => multisigContract.isConfirmed(txHash))
     .then(() => multisigContract.confirmTransaction(txHash, { from: multiSigOwners[3] }))
     .then(() => multisigContract.isConfirmed(txHash))
     .then((result) => {
