@@ -10,7 +10,7 @@ import "./tokens/MelonToken.sol";
 /// @notice   https://medium.com/@gavofyork/condition-orientated-programming-969f6ba0161a#.saav3bvva
 contract Contribution is SafeMath {
 
-    // FILEDS
+    // FIELDS
 
     // Constant fields
     uint public constant ETHER_CAP = 220000 ether; // Max amount raised during first contribution; targeted amount CHF 2.5MN

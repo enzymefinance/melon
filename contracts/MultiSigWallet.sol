@@ -19,7 +19,7 @@ contract MultiSigWallet is Assertive {
         bool executed;
     }
 
-    // FILEDS
+    // FIELDS
 
     // Fields that are only changed in constructor
     address[] multiSigOwners; // Addresses with signing authority

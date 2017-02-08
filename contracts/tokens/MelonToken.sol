@@ -7,7 +7,7 @@ import "../dependencies/ERC20.sol";
 /// @author Melonport AG <team@melonport.com>
 contract MelonToken is ERC20, SafeMath {
 
-    // FILEDS
+    // FIELDS
 
     // Constant token specific fields
     string public constant name = "Melon Token";
