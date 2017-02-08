@@ -120,4 +120,8 @@ contract MelonToken is ERC20, SafeMath {
     /// Post: New minter can now create tokens up to MAX_TOTAL_TOKEN_AMOUNT.
     /// Note: This allows additional contribution periods at a later stage, while still using the same ERC20 compliant contract.
     function changeMintingAddress(address newAddress) only_melonport { minter = newAddress; }
+
+    /// Pre: Restricted to melonport.
+    /// Post: New address set. This address controls the setting of the minter address
+    function changeMelonportAddress(address newAddress) only_melonport { melonport = newAddress; }
 }
