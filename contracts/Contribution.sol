@@ -40,7 +40,7 @@ contract Contribution is SafeMath {
     address public constant AMBASSADOR_SEVEN = 0x58656e8872B0d266c2acCD276cD23F4C0B5fEfb9;
     address public constant SPECIALIST_ONE = 0x8a815e818E617d1f93BE7477D179258aC2d25310;
     address public constant SPECIALIST_TWO = 0x1eba6702ba21cfc1f6c87c726364b60a5e444901;
-    address public constant SPECIALIST_THREE = 0xD3;
+    address public constant SPECIALIST_THREE = 0x82eae6c30ed9606e2b389ae65395648748c6a17f;
     // Stakes of Patrons
     uint public constant MELONPORT_COMPANY_STAKE = 1000; // 10% of all created melon token allocated to melonport company
     uint public constant FOUNDER_STAKE = 445; // 4.45% of all created melon token allocated to founder
