@@ -60,7 +60,7 @@ contract('Contribution', (accounts) => {
   const PRICE_RATE_FOURTH = 2100;
   const DIVISOR_PRICE = 1000; // Price rates are divided by this number
   // Addresses of Patrons
-  const FOUNDER_ONE = '0x8cb08267c381d6339cab49b7bafacc9ce5a503a0';
+  const FOUNDER_ONE = '0x009beAE06B0c0C536ad1eA43D6f61DCCf0748B1f';
   const FOUNDER_TWO = '0xbCE173c414fE96F0F282E1DB904fD4D45EeE9e05';
   const EXT_COMPANY_ONE = '0x00779e0e4c6083cfd26dE77B4dbc107A7EbB99d2';
   const EXT_COMPANY_TWO = '0x1F06B976136e94704D328D4d23aae7259AaC12a2';
@@ -519,8 +519,33 @@ contract('Contribution', (accounts) => {
     });
 
 
-    it('Test changing Melonport address', (done) => {
-      done();
+    it('Test changing Melonport and Minter address in Melon Token', (done) => {
+      melonContract.changeMelonportAddress(accounts[1], { from: melonport })
+      .then(() => melonContract.melonport())
+      .then((result) => {
+        assert.equal(
+          result,
+          accounts[1]);
+        return melonContract.changeMintingAddress(accounts[2], { from: accounts[1] });
+      })
+      .then(() => melonContract.minter())
+      .then((result) => {
+        assert.equal(
+          result,
+          accounts[2]);
+        done();
+      });
+    });
+
+    it('Test changing Melonport and Minter address in Contribution Contract', (done) => {
+      contributionContract.changeMelonportAddress(accounts[1], { from: melonport })
+      .then(() => melonContract.melonport())
+      .then((result) => {
+        assert.equal(
+          result,
+          accounts[1]);
+        done();
+      });
     });
 
     it('Test token transfer too early', (done) => {
