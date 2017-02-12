@@ -24,7 +24,7 @@ contract Contribution is SafeMath {
     uint public constant DIVISOR_PRICE = 1000; // Price rates are divided by this number
     // Addresses of Patrons
     address public constant FOUNDER_ONE = 0x009beAE06B0c0C536ad1eA43D6f61DCCf0748B1f;
-    address public constant FOUNDER_TWO = 0xbCE173c414fE96F0F282E1DB904fD4D45EeE9e05;
+    address public constant FOUNDER_TWO = 0xB1EFca62C555b49E67363B48aE5b8Af3C7E3e656;
     address public constant EXT_COMPANY_ONE = 0x00779e0e4c6083cfd26dE77B4dbc107A7EbB99d2;
     address public constant EXT_COMPANY_TWO = 0x1F06B976136e94704D328D4d23aae7259AaC12a2;
     address public constant EXT_COMPANY_THREE = 0xDD91615Ea8De94bC48231c4ae9488891F1648dc5;
