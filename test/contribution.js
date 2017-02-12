@@ -50,14 +50,14 @@ contract('Contribution', (accounts) => {
   const ether = new BigNumber(Math.pow(10, 18));
 
   // Contribution constant fields
-  const ETHER_CAP = 250000 * ether; // max amount raised during this contribution; targeted amount CHF 2.5MN
+  const ETHER_CAP = 227000 * ether; // max amount raised during this contribution; targeted amount CHF 2.5MN
   const MAX_CONTRIBUTION_DURATION = 4 * weeks; // max amount in seconds of contribution period
-  const BTCS_ETHER_CAP = ETHER_CAP * (25 / 100); // max iced allocation for btcs
+  const BTCS_ETHER_CAP = ETHER_CAP * 25 / 100; // max iced allocation for btcs
   // Price Rates
-  const PRICE_RATE_FIRST = 2250; // Four price tiers, each valid for two weeks
-  const PRICE_RATE_SECOND = 2200;
-  const PRICE_RATE_THIRD = 2150;
-  const PRICE_RATE_FOURTH = 2100;
+  const PRICE_RATE_FIRST = 2200; // Four price tiers, each valid for two weeks
+  const PRICE_RATE_SECOND = 2150;
+  const PRICE_RATE_THIRD = 2100;
+  const PRICE_RATE_FOURTH = 2050;
   const DIVISOR_PRICE = 1000; // Price rates are divided by this number
   // Addresses of Patrons
   const FOUNDER_ONE = '0x009beAE06B0c0C536ad1eA43D6f61DCCf0748B1f';
@@ -425,11 +425,11 @@ contract('Contribution', (accounts) => {
                     amountBought = amountBought.add(testCase.amountToBuy);
                     return melonContract.balanceOf(testCase.account);
                   }).then((result) => {
-                    // console.log(`Melon amount expected: ${web3.fromWei((testCase.expectedPrice / DIVISOR_PRICE) * testCase.amountToBuy, 'ether')}`);
+                    // console.log(`Melon amount expected: ${web3.fromWei((new BigNumber(testCase.amountToBuy)).times(testCase.expectedPrice / DIVISOR_PRICE), 'ether')}`);
                     // console.log(`Melon amount actual:   ${web3.fromWei(result.toNumber(), 'ether')}`);
                     assert.equal(
                       result.toNumber(),
-                      (testCase.expectedPrice / DIVISOR_PRICE) * testCase.amountToBuy);
+                      (new BigNumber(testCase.amountToBuy)).times(testCase.expectedPrice / DIVISOR_PRICE));
                     callbackEach();
                   });
                 });
