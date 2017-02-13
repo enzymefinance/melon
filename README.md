@@ -47,6 +47,10 @@ After installation is complete, go to the above `melon` directory, open a termin
     truffle migrate
     ```
 
+## Mainnet deployed contracts
+
+See [release v1.0](https://github.com/melonproject/melon/releases/tag/1.0) for contract ABI and addresses of contracts deployed to the Ethereum mainnet.
+
 ## Acknowledgements
 
 These token contracts have been influenced by the work of [FirstBlood](https://github.com/Firstbloodio/token).
