@@ -28,9 +28,10 @@ contract Contribution is SafeMath {
     address public constant EXT_COMPANY_ONE = 0x00779e0e4c6083cfd26dE77B4dbc107A7EbB99d2;
     address public constant EXT_COMPANY_TWO = 0x1F06B976136e94704D328D4d23aae7259AaC12a2;
     address public constant EXT_COMPANY_THREE = 0xDD91615Ea8De94bC48231c4ae9488891F1648dc5;
-    address public constant ADVISOR_ONE = 0x4f2AF8d2614190Cc80c6E9772B0C367db8D9753C;
-    address public constant ADVISOR_TWO = 0x715a70a7c7d76acc8d5874862e381c1940c19cce;
-    address public constant ADVISOR_THREE = 0x8615F13C12c24DFdca0ba32511E2861BE02b93b2;
+    address public constant ADVISOR_ONE = 0x0001126FC94AE0be2B685b8dE434a99B2552AAc3;
+    address public constant ADVISOR_TWO = 0x4f2AF8d2614190Cc80c6E9772B0C367db8D9753C;
+    address public constant ADVISOR_THREE = 0x715a70a7c7d76acc8d5874862e381c1940c19cce;
+    address public constant ADVISOR_FOUR = 0x8615F13C12c24DFdca0ba32511E2861BE02b93b2;
     address public constant AMBASSADOR_ONE = 0xd3841FB80CE408ca7d0b41D72aA91CA74652AF47;
     address public constant AMBASSADOR_TWO = 0xDb775577538018a689E4Ad2e8eb5a7Ae7c34722B;
     address public constant AMBASSADOR_THREE = 0xaa967e0ce6A1Ff5F9c124D15AD0412F137C99767;
@@ -44,12 +45,13 @@ contract Contribution is SafeMath {
     // Stakes of Patrons
     uint public constant MELONPORT_COMPANY_STAKE = 1000; // 10% of all created melon token allocated to melonport company
     uint public constant FOUNDER_STAKE = 445; // 4.45% of all created melon token allocated to founder
-    uint public constant EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon token allocated to external company
+    uint public constant EXT_COMPANY_STAKE_ONE = 150; // 1.5% of all created melon token allocated to external company
     uint public constant EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon token allocated to external company
     uint public constant EXT_COMPANY_STAKE_THREE = 50; // 0.5% of all created melon token allocated to external company
-    uint public constant ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon token allocated to advisor
-    uint public constant ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon token allocated to advisor
-    uint public constant ADVISOR_STAKE_THREE = 10; // 0.1% of all created melon token allocated to advisor
+    uint public constant ADVISOR_STAKE_ONE = 150; // 1.5% of all created melon token allocated to advisor
+    uint public constant ADVISOR_STAKE_TWO = 50; // 0.5% of all created melon token allocated to advisor
+    uint public constant ADVISOR_STAKE_THREE = 25; // 0.25% of all created melon token allocated to advisor
+    uint public constant ADVISOR_STAKE_FOUR = 10; // 0.1% of all created melon token allocated to advisor
     uint public constant AMBASSADOR_STAKE = 5; // 0.05% of all created melon token allocated to ambassadors
     uint public constant SPECIALIST_STAKE_ONE = 25; // 0.25% of all created melon token allocated to specialist
     uint public constant SPECIALIST_STAKE_TWO = 10; // 0.1% of all created melon token allocated to specialist
@@ -157,6 +159,7 @@ contract Contribution is SafeMath {
         melonToken.mintIcedToken(ADVISOR_ONE,       ADVISOR_STAKE_ONE *       stakeMultiplier);
         melonToken.mintIcedToken(ADVISOR_TWO,       ADVISOR_STAKE_TWO *       stakeMultiplier);
         melonToken.mintIcedToken(ADVISOR_THREE,     ADVISOR_STAKE_THREE *     stakeMultiplier);
+        melonToken.mintIcedToken(ADVISOR_FOUR,      ADVISOR_STAKE_FOUR *      stakeMultiplier);
         melonToken.mintIcedToken(AMBASSADOR_ONE,    AMBASSADOR_STAKE *        stakeMultiplier);
         melonToken.mintIcedToken(AMBASSADOR_TWO,    AMBASSADOR_STAKE *        stakeMultiplier);
         melonToken.mintIcedToken(AMBASSADOR_THREE,  AMBASSADOR_STAKE *        stakeMultiplier);

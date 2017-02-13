@@ -65,9 +65,10 @@ contract('Contribution', (accounts) => {
   const EXT_COMPANY_ONE = '0x00779e0e4c6083cfd26dE77B4dbc107A7EbB99d2';
   const EXT_COMPANY_TWO = '0x1F06B976136e94704D328D4d23aae7259AaC12a2';
   const EXT_COMPANY_THREE = '0xDD91615Ea8De94bC48231c4ae9488891F1648dc5';
-  const ADVISOR_ONE = '0x4f2AF8d2614190Cc80c6E9772B0C367db8D9753C';
-  const ADVISOR_TWO = '0x715a70a7c7d76acc8d5874862e381c1940c19cce';
-  const ADVISOR_THREE = '0x8615F13C12c24DFdca0ba32511E2861BE02b93b2';
+  const ADVISOR_ONE = '0x0001126FC94AE0be2B685b8dE434a99B2552AAc3';
+  const ADVISOR_TWO = '0x4f2AF8d2614190Cc80c6E9772B0C367db8D9753C';
+  const ADVISOR_THREE = '0x715a70a7c7d76acc8d5874862e381c1940c19cce';
+  const ADVISOR_FOUR = '0x8615F13C12c24DFdca0ba32511E2861BE02b93b2';
   const AMBASSADOR_ONE = '0xd3841FB80CE408ca7d0b41D72aA91CA74652AF47';
   const AMBASSADOR_TWO = '0xDb775577538018a689E4Ad2e8eb5a7Ae7c34722B';
   const AMBASSADOR_THREE = '0xaa967e0ce6A1Ff5F9c124D15AD0412F137C99767';
@@ -77,16 +78,17 @@ contract('Contribution', (accounts) => {
   const AMBASSADOR_SEVEN = '0x58656e8872B0d266c2acCD276cD23F4C0B5fEfb9';
   const SPECIALIST_ONE = '0x8a815e818E617d1f93BE7477D179258aC2d25310';
   const SPECIALIST_TWO = '0x1eba6702ba21cfc1f6c87c726364b60a5e444901';
-  const SPECIALIST_THREE = '0xD3';
+  const SPECIALIST_THREE = '0x82eae6c30ed9606e2b389ae65395648748c6a17f';
   // Stakes of Patrons
   const MELONPORT_COMPANY_STAKE = 1000; // 10% of all created melon token allocated to melonport company
   const FOUNDER_STAKE = 445; // 4.45% of all created melon token allocated to founder
-  const EXT_COMPANY_STAKE_ONE = 300; // 3% of all created melon token allocated to external company
+  const EXT_COMPANY_STAKE_ONE = 150; // 1.5% of all created melon token allocated to external company
   const EXT_COMPANY_STAKE_TWO = 100; // 1% of all created melon token allocated to external company
   const EXT_COMPANY_STAKE_THREE = 50; // 0.5% of all created melon token allocated to external company
-  const ADVISOR_STAKE_ONE = 50; // 0.5% of all created melon token allocated to advisor
-  const ADVISOR_STAKE_TWO = 25; // 0.25% of all created melon token allocated to advisor
-  const ADVISOR_STAKE_THREE = 10; // 0.1% of all created melon token allocated to advisor
+  const ADVISOR_STAKE_ONE = 150; // 1.5% of all created melon token allocated to advisor
+  const ADVISOR_STAKE_TWO = 50; // 0.5% of all created melon token allocated to advisor
+  const ADVISOR_STAKE_THREE = 25; // 0.25% of all created melon token allocated to advisor
+  const ADVISOR_STAKE_FOUR = 10; // 0.1% of all created melon token allocated to advisor
   const AMBASSADOR_STAKE = 5; // 0.05% of all created melon token allocated to ambassadors
   const SPECIALIST_STAKE_ONE = 25; // 0.25% of all created melon token allocated to specialist
   const SPECIALIST_STAKE_TWO = 10; // 0.1% of all created melon token allocated to specialist
@@ -270,6 +272,12 @@ contract('Contribution', (accounts) => {
         assert.equal(
           result.toNumber(),
           MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(ADVISOR_STAKE_THREE).div(DIVISOR_STAKE));
+        return melonContract.lockedBalanceOf(ADVISOR_FOUR);
+      })
+      .then((result) => {
+        assert.equal(
+          result.toNumber(),
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(ADVISOR_STAKE_FOUR).div(DIVISOR_STAKE));
         return melonContract.lockedBalanceOf(AMBASSADOR_ONE);
       })
       .then((result) => {
@@ -312,6 +320,24 @@ contract('Contribution', (accounts) => {
         assert.equal(
           result.toNumber(),
           MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(AMBASSADOR_STAKE).div(DIVISOR_STAKE));
+        return melonContract.lockedBalanceOf(SPECIALIST_ONE);
+        })
+        .then((result) => {
+        assert.equal(
+          result.toNumber(),
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(SPECIALIST_STAKE_ONE).div(DIVISOR_STAKE));
+        return melonContract.lockedBalanceOf(SPECIALIST_TWO);
+        })
+        .then((result) => {
+        assert.equal(
+          result.toNumber(),
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(SPECIALIST_STAKE_TWO).div(DIVISOR_STAKE));
+        return melonContract.lockedBalanceOf(SPECIALIST_THREE);
+        })
+        .then((result) => {
+        assert.equal(
+          result.toNumber(),
+          MAX_TOTAL_TOKEN_AMOUNT_OFFERED_TO_PUBLIC.times(SPECIALIST_STAKE_THREE).div(DIVISOR_STAKE));
         return melonContract.totalSupply();
       })
       .then((result) => {
