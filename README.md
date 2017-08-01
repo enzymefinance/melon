@@ -4,7 +4,7 @@
 
 Token contracts of the Melon contribution.
 
-[![Slack Status](http://chat.melonport.com/badge.svg)](http://chat.melonport.com) [![Gitter](https://badges.gitter.im/melonproject/general.svg)](https://gitter.im/melonproject/general?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Gitter][gitter-badge]][gitter-url]
 
 ## Installation
 
@@ -54,3 +54,6 @@ See [release v1.0](https://github.com/melonproject/melon/releases/tag/1.0) for c
 ## Acknowledgements
 
 These token contracts have been influenced by the work of [FirstBlood](https://github.com/Firstbloodio/token).
+
+[gitter-badge]: https://img.shields.io/gitter/room/melonproject/general.js.svg?style=flat-square
+[gitter-url]: https://gitter.im/melonproject/general?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
