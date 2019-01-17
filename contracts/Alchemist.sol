@@ -5,7 +5,6 @@ import "./openzeppelin/IERC20.sol";
 contract Alchemist {
     address public LEAD;
     address public GOLD;
-    bytes4 public SPELL = bytes4(keccak256('transfer(address,uint256)'));
 
     constructor(address _lead, address _gold) {
         LEAD = _lead;
