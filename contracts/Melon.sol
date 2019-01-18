@@ -8,8 +8,8 @@ contract Melon is ERC20Burnable, ERC20Detailed {
     using SafeMath for uint;
 
     uint public constant BASE_UNITS = 10 ** 18;
-    uint public constant INFLATION_ENABLE_DATE = 1550188888;
-    uint public constant INITIAL_TOTAL_SUPPLY = uint(1002000).mul(BASE_UNITS);
+    uint public constant INFLATION_ENABLE_DATE = 1551398400;
+    uint public constant INITIAL_TOTAL_SUPPLY = uint(932613).mul(BASE_UNITS);
     uint public constant YEARLY_MINTABLE_AMOUNT = uint(300600).mul(BASE_UNITS);
     uint public constant MINTING_INTERVAL = 365 days;
 
