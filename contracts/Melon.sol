@@ -65,7 +65,7 @@ contract Melon is ERC20Burnable, ERC20Detailed {
     }
 
     function mintInflation() public anIntervalHasPassed inflationEnabled {
-        require(initialSupplyMinted, "Initial minting already complete");
+        require(initialSupplyMinted, "Initial minting not complete");
         lastMinting = block.timestamp;
         _mint(council, YEARLY_MINTABLE_AMOUNT);
     }
