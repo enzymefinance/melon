@@ -60,8 +60,8 @@ contract Melon is ERC20Burnable, ERC20Detailed {
 
     function mintInitialSupply(address _initialReceiver) public onlyDeployer {
         require(!initialSupplyMinted, "Initial minting already complete");
-        _mint(_initialReceiver, INITIAL_TOTAL_SUPPLY);
         initialSupplyMinted = true;
+        _mint(_initialReceiver, INITIAL_TOTAL_SUPPLY);
     }
 
     function mintInflation() public anIntervalHasPassed inflationEnabled {
