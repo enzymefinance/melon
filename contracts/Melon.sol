@@ -15,8 +15,8 @@ contract Melon is ERC20Burnable, ERC20Detailed {
 
     address public council;
     address public deployer;
-    uint public lastMinting;
     bool public initialSupplyMinted;
+    uint public nextMinting = INFLATION_ENABLE_DATE;
 
     modifier onlyDeployer {
         require(msg.sender == deployer, "Only deployer can call this");
@@ -30,7 +30,7 @@ contract Melon is ERC20Burnable, ERC20Detailed {
 
     modifier anIntervalHasPassed {
         require(
-            block.timestamp >= uint(lastMinting).add(MINTING_INTERVAL),
+            block.timestamp >= uint(nextMinting),
             "Please wait until an interval has passed"
         );
         _;
@@ -49,7 +49,7 @@ contract Melon is ERC20Burnable, ERC20Detailed {
         string _symbol,
         uint8 _decimals,
         address _council
-    ) ERC20Detailed(_name, _symbol, _decimals) {
+    ) public ERC20Detailed(_name, _symbol, _decimals) {
         deployer = msg.sender;
         council = _council;
     }
@@ -66,7 +66,7 @@ contract Melon is ERC20Burnable, ERC20Detailed {
 
     function mintInflation() public anIntervalHasPassed inflationEnabled {
         require(initialSupplyMinted, "Initial minting not complete");
-        lastMinting = block.timestamp;
+        nextMinting = uint(nextMinting).add(MINTING_INTERVAL);
         _mint(council, YEARLY_MINTABLE_AMOUNT);
     }
 }

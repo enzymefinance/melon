@@ -6,12 +6,12 @@ contract Alchemist {
     address public LEAD;
     address public GOLD;
 
-    constructor(address _lead, address _gold) {
+    constructor(address _lead, address _gold) public {
         LEAD = _lead;
         GOLD = _gold;
     }
 
-    function transmute(uint _mass) {
+    function transmute(uint _mass) external {
         require(
             IERC20(LEAD).transferFrom(msg.sender, address(this), _mass),
             "LEAD transfer failed"
